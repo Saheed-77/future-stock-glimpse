@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CompanySearch } from "@/components/CompanySearch";
+import { Navbar } from "@/components/Navbar";
 import { CompanyProfile } from "@/components/CompanyProfile";
 import { StockChart } from "@/components/StockChart";
 import { ModelMetrics } from "@/components/ModelMetrics";
@@ -30,26 +30,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-gradient-card border-b border-border shadow-card">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary/10 rounded-xl">
-                <Brain className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">Stock Price Predictor</h1>
-                <p className="text-muted-foreground">AI-powered financial forecasting dashboard</p>
-              </div>
-            </div>
-            <CompanySearch 
-              onCompanySelect={handleCompanySelect}
-              selectedCompany={selectedCompany}
-            />
-          </div>
-        </div>
-      </header>
+      <Navbar 
+        onCompanySelect={handleCompanySelect}
+        selectedCompany={selectedCompany}
+      />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">

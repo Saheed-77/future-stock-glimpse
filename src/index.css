@@ -8,50 +8,51 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 30% 8%;
-    --foreground: 213 31% 91%;
+    /* Light Mode Colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-    --card: 210 24% 10%;
-    --card-foreground: 213 31% 91%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-    --popover: 210 24% 10%;
-    --popover-foreground: 213 31% 91%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
     --primary: 217 91% 60%;
-    --primary-foreground: 210 30% 8%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 20% 16%;
-    --secondary-foreground: 213 31% 91%;
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 222.2 84% 4.9%;
 
-    --muted: 210 20% 16%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 210 40% 98%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
     --accent: 142 86% 28%;
-    --accent-foreground: 213 31% 91%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 213 31% 91%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 210 20% 20%;
-    --input: 210 20% 16%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
     --ring: 217 91% 60%;
 
-    /* Financial Dashboard Colors */
+    /* Financial Dashboard Colors - Light Mode */
     --chart-primary: 217 91% 60%;
     --chart-secondary: 142 86% 28%;
     --chart-accent: 45 93% 47%;
     --chart-danger: 0 84% 60%;
-    --surface-elevated: 210 20% 12%;
-    --surface-interactive: 210 15% 18%;
+    --surface-elevated: 0 0% 98%;
+    --surface-interactive: 210 40% 96%;
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60% / 0.2), hsl(217 91% 60% / 0.05));
-    --gradient-card: linear-gradient(145deg, hsl(210 24% 10%), hsl(210 20% 12%));
+    /* Gradients - Light Mode */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60% / 0.1), hsl(217 91% 60% / 0.02));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 20% 98%));
     --gradient-accent: linear-gradient(90deg, hsl(142 86% 28%), hsl(217 91% 60%));
     
-    /* Shadows */
-    --shadow-elevated: 0 8px 32px -4px hsl(217 91% 60% / 0.1);
-    --shadow-card: 0 4px 16px -2px hsl(0 0% 0% / 0.3);
+    /* Shadows - Light Mode */
+    --shadow-elevated: 0 8px 32px -4px hsl(217 91% 60% / 0.15);
+    --shadow-card: 0 4px 16px -2px hsl(0 0% 0% / 0.1);
     
     /* Animation */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

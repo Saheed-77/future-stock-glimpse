@@ -3,6 +3,7 @@ import { CompanySearch } from "@/components/CompanySearch";
 import { CompanyProfile } from "@/components/CompanyProfile";
 import { StockChart } from "@/components/StockChart";
 import { ModelMetrics } from "@/components/ModelMetrics";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   mockCompanyData, 
   generateHistoricalData, 
@@ -43,10 +44,13 @@ const Index = () => {
                 <p className="text-muted-foreground">AI-powered financial forecasting dashboard</p>
               </div>
             </div>
-            <CompanySearch 
-              onCompanySelect={handleCompanySelect}
-              selectedCompany={selectedCompany}
-            />
+            <div className="flex items-center gap-6">
+              <CompanySearch 
+                onCompanySelect={handleCompanySelect}
+                selectedCompany={selectedCompany}
+              />
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>

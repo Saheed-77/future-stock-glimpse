@@ -96,12 +96,12 @@ const Index = () => {
               <StockChart
                 data={historicalData}
                 title="Historical Price (30 Days)"
-                color="hsl(217, 91%, 60%)"
+                variant="primary"
               />
               <StockChart
                 data={predictionData}
                 title="AI Prediction (30 Days)"
-                color="hsl(142, 86%, 28%)"
+                variant="secondary"
                 isPrediction={true}
               />
             </div>

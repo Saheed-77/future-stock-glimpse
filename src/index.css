@@ -104,6 +104,24 @@ All colors MUST be HSL.
     --border: 210 20% 20%;
     --input: 210 20% 16%;
     --ring: 217 91% 60%;
+
+    /* Financial Dashboard Colors - Dark Mode */
+    --chart-primary: 217 91% 60%;
+    --chart-secondary: 142 86% 28%;
+    --chart-accent: 45 93% 47%;
+    --chart-danger: 0 84% 60%;
+    --surface-elevated: 210 20% 12%;
+    --surface-interactive: 210 15% 18%;
+    
+    /* Gradients - Dark Mode */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60% / 0.2), hsl(217 91% 60% / 0.05));
+    --gradient-card: linear-gradient(145deg, hsl(210 24% 10%), hsl(210 20% 12%));
+    --gradient-accent: linear-gradient(90deg, hsl(142 86% 28%), hsl(217 91% 60%));
+    
+    /* Shadows - Dark Mode */
+    --shadow-elevated: 0 8px 32px -4px hsl(217 91% 60% / 0.1);
+    --shadow-card: 0 4px 16px -2px hsl(0 0% 0% / 0.3);
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

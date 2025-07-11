@@ -53,7 +53,15 @@ def get_historical_data(symbol):
     """Get historical stock data"""
     try:
         period = request.args.get('period', '1y')
-        days = 365 if period == '1y' else 30
+        
+        # Map periods to days
+        period_mapping = {
+            '30d': 30,
+            '6m': 180,
+            '1y': 365
+        }
+        
+        days = period_mapping.get(period, 365)
         
         data = []
         today = datetime.now()
@@ -83,7 +91,8 @@ def get_historical_data(symbol):
             'success': True,
             'symbol': symbol.upper(),
             'data': data,
-            'count': len(data)
+            'count': len(data),
+            'period': period
         })
         
     except Exception as e:

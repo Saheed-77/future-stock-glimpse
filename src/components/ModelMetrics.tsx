@@ -4,22 +4,31 @@ import { Progress } from "@/components/ui/progress";
 import { Brain, Target, Activity, Zap } from "lucide-react";
 
 interface ModelMetricsProps {
-  modelName: string;
+  // API format
+  mse?: number;
+  mae?: number;
   accuracy: number;
-  confidenceScore: number;
-  predictionRange: string;
-  lastTrained: string;
-  features: string[];
+  rmse?: number;
+  r2_score?: number;
+  testSamples?: number;
+  lastUpdated?: string;
+  // Mock data format
+  modelName?: string;
+  confidenceScore?: number;
+  predictionRange?: string;
+  lastTrained?: string;
+  features?: string[];
 }
 
-export const ModelMetrics = ({ 
-  modelName, 
-  accuracy, 
-  confidenceScore, 
-  predictionRange, 
-  lastTrained,
-  features 
-}: ModelMetricsProps) => {
+export const ModelMetrics = (props: ModelMetricsProps) => {
+  // Extract values with fallbacks for both API and mock data
+  const modelName = props.modelName || "LSTM Neural Network";
+  const accuracy = props.accuracy;
+  const confidenceScore = props.confidenceScore || (props.accuracy * 0.9); // Approximate confidence from accuracy
+  const predictionRange = props.predictionRange || "30 days";
+  const lastTrained = props.lastTrained || props.lastUpdated || "Recently";
+  const features = props.features || ["Price", "Volume", "Technical Indicators"];
+
   const getConfidenceColor = (score: number) => {
     if (score >= 80) return "text-chart-secondary";
     if (score >= 60) return "text-chart-accent";

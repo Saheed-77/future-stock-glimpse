@@ -19,6 +19,11 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 interface StockDataPoint {
   date: string;
   price: number;
+  volume?: number;
+  high?: number;
+  low?: number;
+  open?: number;
+  confidence?: number;
 }
 
 interface StockChartProps {
@@ -87,6 +92,16 @@ export const StockChart = ({ data, title, isPrediction = false, variant = 'prima
               </span>
             )}
           </div>
+          {isPrediction && data.confidence && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Confidence: {(data.confidence * 100).toFixed(1)}%
+            </p>
+          )}
+          {data.volume && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Volume: {data.volume.toLocaleString()}
+            </p>
+          )}
         </div>
       );
     }

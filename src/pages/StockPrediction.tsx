@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CompanyProfile } from "@/components/CompanyProfile";
 import { StockChart } from "@/components/StockChart";
+import { ProfitLossChart } from "@/components/ProfitLossChart";
 import { ModelMetrics } from "@/components/ModelMetrics";
 import { CompanySearch } from "@/components/CompanySearch";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -114,6 +115,15 @@ const StockPrediction = () => {
                 title="AI Prediction (30 Days)"
                 variant="secondary"
                 isPrediction={true}
+              />
+            </div>
+
+            {/* Profit/Loss Analysis */}
+            <div className="grid grid-cols-1 gap-8">
+              <ProfitLossChart
+                data={historicalData}
+                title="Daily Price Changes - Profit/Loss Analysis"
+                variant="primary"
               />
             </div>
 

@@ -9,12 +9,127 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 import hashlib
 import random
+import yfinance as yf
+import requests
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 
-# Stock base prices for realistic data
+# Stock symbols that we support
+SUPPORTED_SYMBOLS = [
+    'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 
+    'META', 'NVDA', 'NFLX', 'ADBE', 'CRM'
+]
+
+def get_real_time_data(symbol, period='1y'):
+    """Get real-time stock data from Yahoo Finance"""
+    try:
+        ticker = yf.Ticker(symbol)
+        
+        # Map our periods to yfinance periods
+        period_map = {
+            '30d': '1mo',
+            '6m': '6mo', 
+            '1y': '1y'
+        }
+        
+        yf_period = period_map.get(period, '1y')
+        
+        # Get historical data
+        hist = ticker.history(period=yf_period)
+        
+        if hist.empty:
+            return None
+            
+        # Convert to our format
+        data = []
+        for date, row in hist.iterrows():
+            data.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'price': round(float(row['Close']), 2),
+                'high': round(float(row['High']), 2),
+                'low': round(float(row['Low']), 2),
+                'volume': int(row['Volume'])
+            })
+        
+        return data
+        
+    except Exception as e:
+        print(f"Error fetching data for {symbol}: {e}")
+        return None
+
+def get_company_info_real(symbol):
+    """Get real company information from Yahoo Finance"""
+    try:
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        
+        if not info:
+            return None
+            
+        return {
+            'symbol': symbol.upper(),
+            'name': info.get('shortName', f'{symbol} Inc.'),
+            'sector': info.get('sector', 'Unknown'),
+            'industry': info.get('industry', 'Unknown'),
+            'currentPrice': round(float(info.get('currentPrice', 0)), 2),
+            'marketCap': info.get('marketCap', 0),
+            'volume': info.get('volume', 0),
+            'dayHigh': round(float(info.get('dayHigh', 0)), 2),
+            'dayLow': round(float(info.get('dayLow', 0)), 2),
+            'fiftyTwoWeekHigh': round(float(info.get('fiftyTwoWeekHigh', 0)), 2),
+            'fiftyTwoWeekLow': round(float(info.get('fiftyTwoWeekLow', 0)), 2),
+            'peRatio': info.get('trailingPE', 0),
+            'beta': info.get('beta', 0),
+            'description': info.get('longBusinessSummary', f'{symbol} is a publicly traded company.')
+        }
+        
+    except Exception as e:
+        print(f"Error fetching company info for {symbol}: {e}")
+        return None
+
+def get_fallback_data(symbol, period='1y'):
+    """Fallback to mock data if real data fails"""
+    print(f"Using fallback data for {symbol}")
+    
+    # Use the original mock data generation
+    period_mapping = {
+        '30d': 30,
+        '6m': 180,
+        '1y': 365
+    }
+    
+    days = period_mapping.get(period, 365)
+    base_price = STOCK_PRICES.get(symbol.upper(), 100.0)
+    
+    data = []
+    today = datetime.now()
+    
+    for i in range(days):
+        date = today - timedelta(days=days-i)
+        date_str = date.strftime('%Y-%m-%d')
+        price = get_consistent_price(symbol, date_str)
+        
+        # Add some daily variations
+        seed = hashlib.md5(f"{symbol}_{date_str}_daily".encode()).hexdigest()[:8]
+        random.seed(int(seed, 16))
+        
+        high = price * random.uniform(1.01, 1.03)
+        low = price * random.uniform(0.97, 0.99)
+        volume = random.randint(1000000, 10000000)
+        
+        data.append({
+            'date': date_str,
+            'price': price,
+            'high': round(high, 2),
+            'low': round(low, 2),
+            'volume': volume
+        })
+    
+    return data
+
+# Stock base prices for fallback data
 STOCK_PRICES = {
     'AAPL': 185.0,
     'GOOGL': 145.0, 
@@ -50,76 +165,71 @@ def health_check():
 
 @app.route('/api/stock/<symbol>/historical', methods=['GET'])  
 def get_historical_data(symbol):
-    """Get historical stock data"""
+    """Get historical stock data - now with real-time data"""
     try:
         period = request.args.get('period', '1y')
+        symbol = symbol.upper()
         
-        # Map periods to days
-        period_mapping = {
-            '30d': 30,
-            '6m': 180,
-            '1y': 365
-        }
+        print(f"Fetching real-time data for {symbol} ({period})")
         
-        days = period_mapping.get(period, 365)
+        # Try to get real data first
+        data = get_real_time_data(symbol, period)
         
-        data = []
-        today = datetime.now()
+        # If real data fails, use fallback
+        if not data:
+            print(f"Real data failed for {symbol}, using fallback")
+            data = get_fallback_data(symbol, period)
         
-        for i in range(days):
-            date = today - timedelta(days=days-i)
-            date_str = date.strftime('%Y-%m-%d')
-            price = get_consistent_price(symbol, date_str)
-            
-            # Add some daily variations
-            seed = hashlib.md5(f"{symbol}_{date_str}_daily".encode()).hexdigest()[:8]
-            random.seed(int(seed, 16))
-            
-            high = price * random.uniform(1.01, 1.03)
-            low = price * random.uniform(0.97, 0.99)
-            volume = random.randint(1000000, 10000000)
-            
-            data.append({
-                'date': date_str,
-                'price': price,
-                'high': round(high, 2),
-                'low': round(low, 2),
-                'volume': volume
-            })
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'data': data,
+            'count': len(data),
+            'period': period,
+            'source': 'real-time' if data != get_fallback_data(symbol, period) else 'fallback'
+        })
         
+    except Exception as e:
+        print(f"Error in get_historical_data: {e}")
+        # Return fallback data on any error
+        data = get_fallback_data(symbol.upper(), period)
         return jsonify({
             'success': True,
             'symbol': symbol.upper(),
             'data': data,
             'count': len(data),
-            'period': period
+            'period': period,
+            'source': 'fallback'
         })
-        
-    except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'symbol': symbol.upper()
-        }), 500
 
 @app.route('/api/stock/<symbol>/predict', methods=['GET'])
 def predict_stock(symbol):
-    """Generate stock predictions"""
+    """Generate stock predictions based on current real price"""
     try:
         days = int(request.args.get('days', 30))
+        symbol = symbol.upper()
         
         if days > 90:
             return jsonify({
                 'error': 'Maximum 90 days',
-                'symbol': symbol.upper()
+                'symbol': symbol
             }), 400
-            
-        # Get current price as baseline
-        today = datetime.now()
-        current_price = get_consistent_price(symbol, today.strftime('%Y-%m-%d'))
+        
+        # Try to get current real price
+        try:
+            ticker = yf.Ticker(symbol)
+            current_price = ticker.history(period='1d')['Close'].iloc[-1]
+            current_price = round(float(current_price), 2)
+            print(f"Using real current price for {symbol}: ${current_price}")
+        except:
+            # Fallback to mock price
+            today = datetime.now()
+            current_price = get_consistent_price(symbol, today.strftime('%Y-%m-%d'))
+            print(f"Using fallback current price for {symbol}: ${current_price}")
         
         predictions = []
         for i in range(days):
-            future_date = today + timedelta(days=i+1)
+            future_date = datetime.now() + timedelta(days=i+1)
             date_str = future_date.strftime('%Y-%m-%d')
             
             # Generate prediction with slight trend
@@ -138,9 +248,10 @@ def predict_stock(symbol):
         
         return jsonify({
             'success': True,
-            'symbol': symbol.upper(),
+            'symbol': symbol,
             'predictions': predictions,
-            'count': len(predictions)
+            'count': len(predictions),
+            'basePrice': current_price
         })
         
     except Exception as e:
@@ -151,98 +262,109 @@ def predict_stock(symbol):
 
 @app.route('/api/stock/<symbol>/company-info', methods=['GET'])
 def get_company_info(symbol):
-    """Get company information"""
-    
-    # Mock company data
-    companies = {
-        'AAPL': {
-            'name': 'Apple Inc.',
-            'sector': 'Technology',
-            'industry': 'Consumer Electronics',
-            'description': 'Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.'
-        },
-        'GOOGL': {
-            'name': 'Alphabet Inc.',
-            'sector': 'Communication Services', 
-            'industry': 'Internet Content & Information',
-            'description': 'Alphabet Inc. provides online advertising services in the United States, Europe, the Middle East, Africa, the Asia-Pacific, Canada, and Latin America.'
-        },
-        'MSFT': {
-            'name': 'Microsoft Corporation',
-            'sector': 'Technology',
-            'industry': 'Software—Infrastructure', 
-            'description': 'Microsoft Corporation develops, licenses, and supports software, services, devices, and solutions worldwide.'
-        },
-        'AMZN': {
-            'name': 'Amazon.com Inc.',
-            'sector': 'Consumer Discretionary',
-            'industry': 'Internet Retail',
-            'description': 'Amazon.com, Inc. engages in the retail sale of consumer products and subscriptions in North America and internationally.'
-        },
-        'TSLA': {
-            'name': 'Tesla Inc.',
-            'sector': 'Consumer Discretionary', 
-            'industry': 'Auto Manufacturers',
-            'description': 'Tesla, Inc. designs, develops, manufactures, leases, and sells electric vehicles, and energy generation and storage systems.'
-        },
-        'META': {
-            'name': 'Meta Platforms Inc.',
-            'sector': 'Communication Services',
-            'industry': 'Internet Content & Information',
-            'description': 'Meta Platforms, Inc. develops products that enable people to connect and share with friends and family through mobile devices, personal computers, virtual reality headsets, wearables, and in-home devices worldwide.'
-        },
-        'NVDA': {
-            'name': 'NVIDIA Corporation',
-            'sector': 'Technology',
-            'industry': 'Semiconductors',
-            'description': 'NVIDIA Corporation operates as a computing company in the United States, Taiwan, China, Hong Kong, and internationally.'
-        },
-        'NFLX': {
-            'name': 'Netflix Inc.',
-            'sector': 'Communication Services',
-            'industry': 'Entertainment',
-            'description': 'Netflix, Inc. provides entertainment services. It offers TV series, documentaries, feature films, and mobile games.'
-        }
-    }
-    
+    """Get company information - now with real-time data"""
     try:
         symbol = symbol.upper()
-        company = companies.get(symbol)
+        print(f"Fetching real company info for {symbol}")
         
-        if not company:
-            return jsonify({
-                'error': f'Company info not found for {symbol}',
-                'symbol': symbol
-            }), 404
+        # Try to get real company info
+        company_info = get_company_info_real(symbol)
         
-        # Get current price
-        current_price = get_consistent_price(symbol, datetime.now().strftime('%Y-%m-%d'))
-        
-        # Generate mock metrics
-        seed = hashlib.md5(f"{symbol}_metrics".encode()).hexdigest()[:8]
-        random.seed(int(seed, 16))
-        
-        company_info = {
-            'symbol': symbol,
-            'name': company['name'],
-            'sector': company['sector'],
-            'industry': company['industry'],
-            'currentPrice': current_price,
-            'marketCap': random.randint(100000000000, 3000000000000),  # 100B - 3T
-            'volume': random.randint(10000000, 100000000),
-            'dayHigh': current_price * random.uniform(1.01, 1.05),
-            'dayLow': current_price * random.uniform(0.95, 0.99),
-            'fiftyTwoWeekHigh': current_price * random.uniform(1.1, 1.4),
-            'fiftyTwoWeekLow': current_price * random.uniform(0.6, 0.9),
-            'peRatio': random.uniform(15, 35),
-            'beta': random.uniform(0.8, 1.5),
-            'description': company['description']
-        }
+        if not company_info:
+            print(f"Real company info failed for {symbol}, using fallback")
+            # Fallback to mock data
+            companies = {
+                'AAPL': {
+                    'name': 'Apple Inc.',
+                    'sector': 'Technology',
+                    'industry': 'Consumer Electronics',
+                    'description': 'Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.'
+                },
+                'GOOGL': {
+                    'name': 'Alphabet Inc.',
+                    'sector': 'Communication Services', 
+                    'industry': 'Internet Content & Information',
+                    'description': 'Alphabet Inc. provides online advertising services in the United States, Europe, the Middle East, Africa, the Asia-Pacific, Canada, and Latin America.'
+                },
+                'MSFT': {
+                    'name': 'Microsoft Corporation',
+                    'sector': 'Technology',
+                    'industry': 'Software—Infrastructure', 
+                    'description': 'Microsoft Corporation develops, licenses, and supports software, services, devices, and solutions worldwide.'
+                },
+                'AMZN': {
+                    'name': 'Amazon.com Inc.',
+                    'sector': 'Consumer Discretionary',
+                    'industry': 'Internet Retail',
+                    'description': 'Amazon.com, Inc. engages in the retail sale of consumer products and subscriptions in North America and internationally.'
+                },
+                'TSLA': {
+                    'name': 'Tesla Inc.',
+                    'sector': 'Consumer Discretionary', 
+                    'industry': 'Auto Manufacturers',
+                    'description': 'Tesla, Inc. designs, develops, manufactures, leases, and sells electric vehicles, and energy generation and storage systems.'
+                },
+                'META': {
+                    'name': 'Meta Platforms Inc.',
+                    'sector': 'Communication Services',
+                    'industry': 'Internet Content & Information',
+                    'description': 'Meta Platforms, Inc. develops products that enable people to connect and share with friends and family through mobile devices, personal computers, virtual reality headsets, wearables, and in-home devices worldwide.'
+                },
+                'NVDA': {
+                    'name': 'NVIDIA Corporation',
+                    'sector': 'Technology',
+                    'industry': 'Semiconductors',
+                    'description': 'NVIDIA Corporation operates as a computing company in the United States, Taiwan, China, Hong Kong, and internationally.'
+                },
+                'NFLX': {
+                    'name': 'Netflix Inc.',
+                    'sector': 'Communication Services',
+                    'industry': 'Entertainment',
+                    'description': 'Netflix, Inc. provides entertainment services. It offers TV series, documentaries, feature films, and mobile games.'
+                }
+            }
+            
+            company = companies.get(symbol)
+            if not company:
+                return jsonify({
+                    'error': f'Company info not found for {symbol}',
+                    'symbol': symbol
+                }), 404
+            
+            # Get current price (try real, fallback to mock)
+            try:
+                ticker = yf.Ticker(symbol)
+                current_price = ticker.history(period='1d')['Close'].iloc[-1]
+                current_price = round(float(current_price), 2)
+            except:
+                current_price = get_consistent_price(symbol, datetime.now().strftime('%Y-%m-%d'))
+            
+            # Generate mock metrics
+            seed = hashlib.md5(f"{symbol}_metrics".encode()).hexdigest()[:8]
+            random.seed(int(seed, 16))
+            
+            company_info = {
+                'symbol': symbol,
+                'name': company['name'],
+                'sector': company['sector'],
+                'industry': company['industry'],
+                'currentPrice': current_price,
+                'marketCap': random.randint(100000000000, 3000000000000),
+                'volume': random.randint(10000000, 100000000),
+                'dayHigh': current_price * random.uniform(1.01, 1.05),
+                'dayLow': current_price * random.uniform(0.95, 0.99),
+                'fiftyTwoWeekHigh': current_price * random.uniform(1.1, 1.4),
+                'fiftyTwoWeekLow': current_price * random.uniform(0.6, 0.9),
+                'peRatio': random.uniform(15, 35),
+                'beta': random.uniform(0.8, 1.5),
+                'description': company['description']
+            }
         
         return jsonify({
             'success': True,
             'symbol': symbol,
-            'company': company_info
+            'company': company_info,
+            'source': 'real-time' if get_company_info_real(symbol) else 'fallback'
         })
         
     except Exception as e:
@@ -286,24 +408,53 @@ def get_metrics(symbol):
 
 @app.route('/api/stocks/popular', methods=['GET'])
 def get_popular_stocks():
-    """Get popular stocks with prices"""
+    """Get popular stocks with real-time prices"""
     try:
         stocks = []
-        today = datetime.now().strftime('%Y-%m-%d')
-        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX']
         
-        for symbol in STOCK_PRICES.keys():
-            current_price = get_consistent_price(symbol, today)
-            prev_price = get_consistent_price(symbol, yesterday)
-            change = current_price - prev_price
-            change_percent = (change / prev_price) * 100
-            
-            stocks.append({
-                'symbol': symbol,
-                'price': current_price,
-                'change': round(change, 2),
-                'changePercent': round(change_percent, 2)
-            })
+        print("Fetching real-time data for popular stocks...")
+        
+        for symbol in symbols:
+            try:
+                # Try to get real data
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period='2d')  # Get last 2 days
+                
+                if not hist.empty and len(hist) >= 2:
+                    current_price = round(float(hist['Close'].iloc[-1]), 2)
+                    prev_price = round(float(hist['Close'].iloc[-2]), 2)
+                    change = round(current_price - prev_price, 2)
+                    change_percent = round((change / prev_price) * 100, 2)
+                    
+                    stocks.append({
+                        'symbol': symbol,
+                        'price': current_price,
+                        'change': change,
+                        'changePercent': change_percent,
+                        'source': 'real-time'
+                    })
+                else:
+                    raise Exception("Insufficient data")
+                    
+            except Exception as e:
+                print(f"Failed to get real data for {symbol}, using fallback: {e}")
+                # Fallback to mock data
+                today = datetime.now().strftime('%Y-%m-%d')
+                yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+                
+                current_price = get_consistent_price(symbol, today)
+                prev_price = get_consistent_price(symbol, yesterday)
+                change = current_price - prev_price
+                change_percent = (change / prev_price) * 100
+                
+                stocks.append({
+                    'symbol': symbol,
+                    'price': current_price,
+                    'change': round(change, 2),
+                    'changePercent': round(change_percent, 2),
+                    'source': 'fallback'
+                })
         
         return jsonify({
             'success': True,

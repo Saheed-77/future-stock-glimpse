@@ -1,73 +1,35 @@
-# Welcome to your Lovable project
+# Future Stock Glimpse
 
-## Project info
+Future Stock Glimpse is a modern, interactive web application designed for visualizing and analyzing stock market data. It provides users with advanced charting, predictive analytics, and customizable dashboards, enabling investors and analysts to make informed decisions with real-time insights. The application focuses on performance, usability, and a seamless user experience, making it an ideal choice for both professionals and enthusiasts interested in financial markets.
 
-**URL**: https://lovable.dev/projects/0332aeb2-db6c-4c71-aa8f-aa4c6e9957bd
+## Features
+- Real-time stock data visualization
+- Predictive analytics and insights
+- Customizable dashboards
+- Responsive UI
 
-## How can I edit this code?
+## Technologies Used
+- Vite – Fast build tool and development server for modern web projects
+- TypeScript – Strongly typed programming language that builds on JavaScript
+- React – Library for building interactive user interfaces
+- shadcn/ui – Collection of accessible, customizable UI components for React
+- Tailwind CSS – Utility-first CSS framework for styling
+- Python for backend integration, data processing and ML Models
+- CSS – Styling for enhanced UI
+- Other – Additional tools/libraries as needed
 
-There are several ways of editing your application.
+## Screenshots
+![App Screenshot](link-to-screenshot.png)
 
-**Use Lovable**
+## Getting Started
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/0332aeb2-db6c-4c71-aa8f-aa4c6e9957bd) and start prompting.
+### Prerequisites
+- Node.js >= 18.x
+- npm
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
+### Installation
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone https://github.com/Soulbreaker7/future-stock-glimpse-ui.git
+cd future-stock-glimpse-ui
+npm install
 npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/0332aeb2-db6c-4c71-aa8f-aa4c6e9957bd) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)

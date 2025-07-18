@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, TrendingUp } from "lucide-react";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 ChartJS.register(
   CategoryScale,
@@ -33,24 +34,28 @@ interface StockDataPoint {
 interface StockChartProps {
   data: StockDataPoint[];
   title: string;
-  color: string;
   isPrediction?: boolean;
+  variant?: 'primary' | 'secondary';
 }
 
-export const StockChart = ({ data, title, color, isPrediction = false }: StockChartProps) => {
+export const StockChart = ({ data, title, isPrediction = false, variant = 'primary' }: StockChartProps) => {
+  const colors = useThemeColors();
+  
+  const chartColor = variant === 'primary' ? colors.chartPrimary : colors.chartSecondary;
+  
   const chartData = {
     labels: data.map(point => point.date),
     datasets: [
       {
         label: title,
         data: data.map(point => point.price),
-        borderColor: color,
-        backgroundColor: `${color}10`,
+        borderColor: chartColor,
+        backgroundColor: `${chartColor}15`,
         borderWidth: 2,
         fill: true,
         tension: 0.4,
-        pointBackgroundColor: color,
-        pointBorderColor: color,
+        pointBackgroundColor: chartColor,
+        pointBorderColor: chartColor,
         pointRadius: isPrediction ? 2 : 1,
         pointHoverRadius: 4,
         borderDash: isPrediction ? [5, 5] : [],
@@ -66,10 +71,10 @@ export const StockChart = ({ data, title, color, isPrediction = false }: StockCh
         display: false,
       },
       tooltip: {
-        backgroundColor: 'hsl(210 24% 10%)',
-        titleColor: 'hsl(213 31% 91%)',
-        bodyColor: 'hsl(213 31% 91%)',
-        borderColor: 'hsl(210 20% 20%)',
+        backgroundColor: colors.tooltipBg,
+        titleColor: colors.tooltipText,
+        bodyColor: colors.tooltipText,
+        borderColor: colors.tooltipBorder,
         borderWidth: 1,
         cornerRadius: 8,
         callbacks: {
@@ -82,21 +87,21 @@ export const StockChart = ({ data, title, color, isPrediction = false }: StockCh
     scales: {
       x: {
         grid: {
-          color: 'hsl(210 20% 20%)',
+          color: colors.chartGrid,
           drawBorder: false,
         },
         ticks: {
-          color: 'hsl(215 20% 65%)',
+          color: colors.chartText,
           maxTicksLimit: 8,
         },
       },
       y: {
         grid: {
-          color: 'hsl(210 20% 20%)',
+          color: colors.chartGrid,
           drawBorder: false,
         },
         ticks: {
-          color: 'hsl(215 20% 65%)',
+          color: colors.chartText,
           callback: function(value: any) {
             return '$' + value.toFixed(0);
           },

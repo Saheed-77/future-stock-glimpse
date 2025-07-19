@@ -98,7 +98,7 @@ class StockAPIService {
     }
   }
 
-  async predictStockPrice(symbol: string, days: number = 30): Promise<PredictionData[]> {
+  async predictStockPrice(symbol: string, days: number = 30): Promise<any> {
     try {
       const response = await fetch(`${this.baseURL}/stock/${symbol}/predict?days=${days}`);
       if (!response.ok) {
@@ -110,7 +110,14 @@ class StockAPIService {
         throw new Error(data.error || 'Failed to generate predictions');
       }
       
-      return data.predictions;
+      // Return the full response so we can access metadata like source, ml_training_status, etc.
+      return {
+        predictions: data.predictions,
+        source: data.source,
+        ml_training_status: data.ml_training_status,
+        basePrice: data.basePrice,
+        model_info: data.model_info
+      };
     } catch (error) {
       console.error(`Error predicting stock price for ${symbol}:`, error);
       throw error;

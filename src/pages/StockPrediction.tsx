@@ -4,11 +4,14 @@ import { CompanyProfile } from "@/components/CompanyProfile";
 import { StockChart } from "@/components/StockChart";
 import { ProfitLossChart } from "@/components/ProfitLossChart";
 import { ModelMetrics } from "@/components/ModelMetrics";
+import { MLPredictionDisplay } from "@/components/MLPredictionDisplay";
+import { ModelTrainingStatus } from "@/components/ModelTrainingStatus";
 import { CompanySearch } from "@/components/CompanySearch";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { stockAPI, type StockData, type PredictionData, type CompanyInfo, type ModelMetrics as APIModelMetrics } from "@/services/stockAPI";
 import { 
   mockCompanyData, 
@@ -16,7 +19,7 @@ import {
   generatePredictionData, 
   mockModelMetrics 
 } from "@/utils/mockData";
-import { Brain, ArrowLeft, AlertCircle, Loader2, Wifi, WifiOff } from "lucide-react";
+import { Brain, ArrowLeft, AlertCircle, Loader2, Wifi, WifiOff, BarChart3, TrendingUp, Activity } from "lucide-react";
 
 interface Company {
   symbol: string;
@@ -37,6 +40,8 @@ const StockPrediction = () => {
   const [modelMetrics, setModelMetrics] = useState<APIModelMetrics | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('1y');
   const [isLoadingChart, setIsLoadingChart] = useState(false);
+  const [predictionSource, setPredictionSource] = useState<'ml_model' | 'statistical_fallback' | 'mock_data'>('mock_data');
+  const [isModelTraining, setIsModelTraining] = useState(false);
 
   useEffect(() => {
     if (symbol) {
@@ -89,7 +94,16 @@ const StockPrediction = () => {
 
       // Handle predictions
       if (predictions.status === 'fulfilled') {
-        setPredictionData(predictions.value);
+        const predResponse = predictions.value;
+        setPredictionData(predResponse.predictions || predResponse);
+        
+        // Extract metadata if available
+        if (predResponse.source) {
+          setPredictionSource(predResponse.source);
+        }
+        if (predResponse.ml_training_status === 'in_progress') {
+          setIsModelTraining(true);
+        }
       } else {
         console.error('Error loading predictions:', predictions.reason);
       }
@@ -171,6 +185,7 @@ const StockPrediction = () => {
       setHistoricalData(mockHistorical);
       setPredictionData(mockPredictions);
       setModelMetrics(mockModelMetrics);
+      setPredictionSource('mock_data');
     } else {
       // If company not found, redirect to home
       navigate("/");
@@ -180,6 +195,14 @@ const StockPrediction = () => {
   const handleCompanySelect = (company: Company) => {
     setSelectedCompany(company);
     navigate(`/stock/${company.symbol.toLowerCase()}`);
+  };
+
+  const handleTrainingComplete = () => {
+    setIsModelTraining(false);
+    // Reload predictions to get the new ML model results
+    if (selectedCompany) {
+      loadRealData(selectedCompany.symbol);
+    }
   };
 
   const handleRetry = () => {
@@ -352,57 +375,91 @@ const StockPrediction = () => {
             } : mockCompanyData[selectedCompany.symbol]} 
           />
 
-          {/* Charts Section */}
-          <div className="space-y-6">
-            {/* Time Period Filter */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">Historical Data</h3>
-              <div className="flex items-center gap-2">
-                {['30d', '6m', '1y'].map((period) => (
-                  <Button
-                    key={period}
-                    variant={selectedPeriod === period ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handlePeriodChange(period)}
-                    disabled={isLoadingChart}
-                    className="min-w-[60px]"
-                  >
-                    {isLoadingChart && selectedPeriod === period ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      period === '30d' ? '30D' : period === '6m' ? '6M' : '1Y'
-                    )}
-                  </Button>
-                ))}
+          {/* ML Training Status */}
+          <ModelTrainingStatus 
+            symbol={selectedCompany.symbol}
+            onTrainingComplete={handleTrainingComplete}
+          />
+
+          {/* Enhanced ML Predictions */}
+          <MLPredictionDisplay
+            historicalData={historicalData}
+            predictionData={predictionData}
+            symbol={selectedCompany.symbol}
+            modelSource={predictionSource}
+            isTraining={isModelTraining}
+          />
+
+          {/* Analysis Tabs */}
+          <Tabs defaultValue="charts" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="charts" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Charts
+              </TabsTrigger>
+              <TabsTrigger value="analysis" className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Analysis
+              </TabsTrigger>
+              <TabsTrigger value="metrics" className="flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Metrics
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="charts" className="space-y-6">
+              {/* Time Period Filter */}
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">Historical Data</h3>
+                <div className="flex items-center gap-2">
+                  {['30d', '6m', '1y'].map((period) => (
+                    <Button
+                      key={period}
+                      variant={selectedPeriod === period ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePeriodChange(period)}
+                      disabled={isLoadingChart}
+                      className="min-w-[60px]"
+                    >
+                      {isLoadingChart && selectedPeriod === period ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        period === '30d' ? '30D' : period === '6m' ? '6M' : '1Y'
+                      )}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <StockChart
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <StockChart
+                  data={historicalData}
+                  title={`Historical Price (${selectedPeriod === '30d' ? '30 Days' : selectedPeriod === '6m' ? '6 Months' : '1 Year'})`}
+                  variant="primary"
+                />
+                <StockChart
+                  data={predictionData}
+                  title="AI Prediction (30 Days)"
+                  variant="secondary"
+                  isPrediction={true}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="analysis" className="space-y-6">
+              {/* Profit/Loss Analysis */}
+              <ProfitLossChart
                 data={historicalData}
-                title={`Historical Price (${selectedPeriod === '30d' ? '30 Days' : selectedPeriod === '6m' ? '6 Months' : '1 Year'})`}
+                title="Daily Price Changes - Profit/Loss Analysis"
                 variant="primary"
               />
-              <StockChart
-                data={predictionData}
-                title="AI Prediction (30 Days)"
-                variant="secondary"
-                isPrediction={true}
-              />
-            </div>
-          </div>
+            </TabsContent>
 
-          {/* Profit/Loss Analysis */}
-          <div className="grid grid-cols-1 gap-8">
-            <ProfitLossChart
-              data={historicalData}
-              title="Daily Price Changes - Profit/Loss Analysis"
-              variant="primary"
-            />
-          </div>
-
-          {/* Model Metrics */}
-          <ModelMetrics {...(modelMetrics || mockModelMetrics)} />
+            <TabsContent value="metrics" className="space-y-6">
+              {/* Model Metrics */}
+              <ModelMetrics {...(modelMetrics || mockModelMetrics)} />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

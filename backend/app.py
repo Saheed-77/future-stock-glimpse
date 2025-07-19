@@ -1,0 +1,373 @@
+#!/usr/bin/env python3
+"""
+Simple Stock Prediction Backend API
+Built from scratch - clean and reliable
+"""
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from datetime import datetime, timedelta
+import hashlib
+import random
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)
+
+# Stock base prices for realistic data
+STOCK_PRICES = {
+    'AAPL': 185.0,
+    'GOOGL': 145.0, 
+    'MSFT': 415.0,
+    'AMZN': 155.0,
+    'TSLA': 245.0,
+    'META': 320.0,
+    'NVDA': 480.0,
+    'NFLX': 450.0,
+    'ADBE': 580.0,
+    'CRM': 240.0
+}
+
+def get_consistent_price(symbol, date_str):
+    """Generate consistent price for symbol on specific date"""
+    seed = hashlib.md5(f"{symbol}_{date_str}".encode()).hexdigest()[:8]
+    random.seed(int(seed, 16))
+    
+    base = STOCK_PRICES.get(symbol.upper(), 100.0)
+    variation = random.uniform(-0.1, 0.1)  # ±10%
+    return round(base * (1 + variation), 2)
+
+# ===== API ENDPOINTS =====
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'message': 'Stock Prediction API is running'
+    })
+
+@app.route('/api/stock/<symbol>/historical', methods=['GET'])  
+def get_historical_data(symbol):
+    """Get historical stock data"""
+    try:
+        period = request.args.get('period', '1y')
+        days = 365 if period == '1y' else 30
+        
+        data = []
+        today = datetime.now()
+        
+        for i in range(days):
+            date = today - timedelta(days=days-i)
+            date_str = date.strftime('%Y-%m-%d')
+            price = get_consistent_price(symbol, date_str)
+            
+            # Add some daily variations
+            seed = hashlib.md5(f"{symbol}_{date_str}_daily".encode()).hexdigest()[:8]
+            random.seed(int(seed, 16))
+            
+            high = price * random.uniform(1.01, 1.03)
+            low = price * random.uniform(0.97, 0.99)
+            volume = random.randint(1000000, 10000000)
+            
+            data.append({
+                'date': date_str,
+                'price': price,
+                'high': round(high, 2),
+                'low': round(low, 2),
+                'volume': volume
+            })
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol.upper(),
+            'data': data,
+            'count': len(data)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'symbol': symbol.upper()
+        }), 500
+
+@app.route('/api/stock/<symbol>/predict', methods=['GET'])
+def predict_stock(symbol):
+    """Generate stock predictions"""
+    try:
+        days = int(request.args.get('days', 30))
+        
+        if days > 90:
+            return jsonify({
+                'error': 'Maximum 90 days',
+                'symbol': symbol.upper()
+            }), 400
+            
+        # Get current price as baseline
+        today = datetime.now()
+        current_price = get_consistent_price(symbol, today.strftime('%Y-%m-%d'))
+        
+        predictions = []
+        for i in range(days):
+            future_date = today + timedelta(days=i+1)
+            date_str = future_date.strftime('%Y-%m-%d')
+            
+            # Generate prediction with slight trend
+            seed = hashlib.md5(f"{symbol}_{date_str}_pred".encode()).hexdigest()[:8]
+            random.seed(int(seed, 16))
+            
+            trend = 1 + (i * 0.001)  # 0.1% daily growth
+            noise = random.uniform(-0.02, 0.02)  # ±2% volatility
+            predicted_price = current_price * trend * (1 + noise)
+            
+            predictions.append({
+                'date': date_str,
+                'price': round(predicted_price, 2),
+                'confidence': random.uniform(0.7, 0.95)
+            })
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol.upper(),
+            'predictions': predictions,
+            'count': len(predictions)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'symbol': symbol.upper()
+        }), 500
+
+@app.route('/api/stock/<symbol>/company-info', methods=['GET'])
+def get_company_info(symbol):
+    """Get company information"""
+    
+    # Mock company data
+    companies = {
+        'AAPL': {
+            'name': 'Apple Inc.',
+            'sector': 'Technology',
+            'industry': 'Consumer Electronics',
+            'description': 'Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.'
+        },
+        'GOOGL': {
+            'name': 'Alphabet Inc.',
+            'sector': 'Communication Services', 
+            'industry': 'Internet Content & Information',
+            'description': 'Alphabet Inc. provides online advertising services in the United States, Europe, the Middle East, Africa, the Asia-Pacific, Canada, and Latin America.'
+        },
+        'MSFT': {
+            'name': 'Microsoft Corporation',
+            'sector': 'Technology',
+            'industry': 'Software—Infrastructure', 
+            'description': 'Microsoft Corporation develops, licenses, and supports software, services, devices, and solutions worldwide.'
+        },
+        'AMZN': {
+            'name': 'Amazon.com Inc.',
+            'sector': 'Consumer Discretionary',
+            'industry': 'Internet Retail',
+            'description': 'Amazon.com, Inc. engages in the retail sale of consumer products and subscriptions in North America and internationally.'
+        },
+        'TSLA': {
+            'name': 'Tesla Inc.',
+            'sector': 'Consumer Discretionary', 
+            'industry': 'Auto Manufacturers',
+            'description': 'Tesla, Inc. designs, develops, manufactures, leases, and sells electric vehicles, and energy generation and storage systems.'
+        },
+        'META': {
+            'name': 'Meta Platforms Inc.',
+            'sector': 'Communication Services',
+            'industry': 'Internet Content & Information',
+            'description': 'Meta Platforms, Inc. develops products that enable people to connect and share with friends and family through mobile devices, personal computers, virtual reality headsets, wearables, and in-home devices worldwide.'
+        },
+        'NVDA': {
+            'name': 'NVIDIA Corporation',
+            'sector': 'Technology',
+            'industry': 'Semiconductors',
+            'description': 'NVIDIA Corporation operates as a computing company in the United States, Taiwan, China, Hong Kong, and internationally.'
+        },
+        'NFLX': {
+            'name': 'Netflix Inc.',
+            'sector': 'Communication Services',
+            'industry': 'Entertainment',
+            'description': 'Netflix, Inc. provides entertainment services. It offers TV series, documentaries, feature films, and mobile games.'
+        }
+    }
+    
+    try:
+        symbol = symbol.upper()
+        company = companies.get(symbol)
+        
+        if not company:
+            return jsonify({
+                'error': f'Company info not found for {symbol}',
+                'symbol': symbol
+            }), 404
+        
+        # Get current price
+        current_price = get_consistent_price(symbol, datetime.now().strftime('%Y-%m-%d'))
+        
+        # Generate mock metrics
+        seed = hashlib.md5(f"{symbol}_metrics".encode()).hexdigest()[:8]
+        random.seed(int(seed, 16))
+        
+        company_info = {
+            'symbol': symbol,
+            'name': company['name'],
+            'sector': company['sector'],
+            'industry': company['industry'],
+            'currentPrice': current_price,
+            'marketCap': random.randint(100000000000, 3000000000000),  # 100B - 3T
+            'volume': random.randint(10000000, 100000000),
+            'dayHigh': current_price * random.uniform(1.01, 1.05),
+            'dayLow': current_price * random.uniform(0.95, 0.99),
+            'fiftyTwoWeekHigh': current_price * random.uniform(1.1, 1.4),
+            'fiftyTwoWeekLow': current_price * random.uniform(0.6, 0.9),
+            'peRatio': random.uniform(15, 35),
+            'beta': random.uniform(0.8, 1.5),
+            'description': company['description']
+        }
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'company': company_info
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'symbol': symbol.upper()
+        }), 500
+
+@app.route('/api/stock/<symbol>/metrics', methods=['GET'])
+def get_metrics(symbol):
+    """Get model metrics"""
+    try:
+        # Generate consistent mock metrics
+        seed = hashlib.md5(f"{symbol}_model_metrics".encode()).hexdigest()[:8]
+        random.seed(int(seed, 16))
+        
+        metrics = {
+            'accuracy': random.uniform(0.75, 0.95),
+            'mse': random.uniform(0.001, 0.01),
+            'mae': random.uniform(0.5, 2.0),
+            'rmse': random.uniform(0.8, 3.0),
+            'r2_score': random.uniform(0.7, 0.9),
+            'lastUpdated': datetime.now().isoformat(),
+            'modelName': 'LSTM',
+            'confidenceScore': random.uniform(0.8, 0.95),
+            'predictionRange': '30 days',
+            'features': ['price', 'volume', 'moving_average', 'rsi']
+        }
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol.upper(),
+            'metrics': metrics
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'symbol': symbol.upper()
+        }), 500
+
+@app.route('/api/stocks/popular', methods=['GET'])
+def get_popular_stocks():
+    """Get popular stocks with prices"""
+    try:
+        stocks = []
+        today = datetime.now().strftime('%Y-%m-%d')
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        for symbol in STOCK_PRICES.keys():
+            current_price = get_consistent_price(symbol, today)
+            prev_price = get_consistent_price(symbol, yesterday)
+            change = current_price - prev_price
+            change_percent = (change / prev_price) * 100
+            
+            stocks.append({
+                'symbol': symbol,
+                'price': current_price,
+                'change': round(change, 2),
+                'changePercent': round(change_percent, 2)
+            })
+        
+        return jsonify({
+            'success': True,
+            'stocks': stocks,
+            'count': len(stocks)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'stocks': []
+        }), 500
+
+@app.route('/api/stocks/search', methods=['GET'])
+def search_stocks():
+    """Search for stocks"""
+    try:
+        query = request.args.get('q', '').upper()
+        
+        if not query:
+            return jsonify({
+                'error': 'Query required',
+                'results': []
+            }), 400
+        
+        companies = {
+            'AAPL': {'name': 'Apple Inc.', 'industry': 'Technology'},
+            'GOOGL': {'name': 'Alphabet Inc.', 'industry': 'Technology'},
+            'MSFT': {'name': 'Microsoft Corporation', 'industry': 'Technology'},
+            'AMZN': {'name': 'Amazon.com Inc.', 'industry': 'Consumer Discretionary'},
+            'TSLA': {'name': 'Tesla Inc.', 'industry': 'Consumer Discretionary'},
+            'META': {'name': 'Meta Platforms Inc.', 'industry': 'Technology'},
+            'NVDA': {'name': 'NVIDIA Corporation', 'industry': 'Technology'},
+            'NFLX': {'name': 'Netflix Inc.', 'industry': 'Communication Services'}
+        }
+        
+        results = []
+        for symbol, info in companies.items():
+            if query in symbol or query in info['name'].upper():
+                results.append({
+                    'symbol': symbol,
+                    'name': info['name'],
+                    'industry': info['industry']
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'query': query
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'results': []
+        }), 500
+
+# Error handlers
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'error': 'Endpoint not found'
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        'error': 'Internal server error'
+    }), 500
+
+if __name__ == '__main__':
+    print("🚀 Starting Clean Stock Prediction API...")
+    print("📍 Running on: http://localhost:5000")
+    print("✅ All endpoints ready!")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000)

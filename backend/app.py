@@ -11,16 +11,73 @@ import hashlib
 import random
 import yfinance as yf
 import requests
+import numpy as np
+import threading
+import os
+
+# Try to import ML predictor, gracefully handle failure
+try:
+    from ml_predictor_v2 import StockPredictor, train_model_for_symbol
+    ML_AVAILABLE = True
+    print("✅ ML Predictor loaded successfully")
+except Exception as e:
+    print(f"⚠️  ML Predictor not available: {e}")
+    ML_AVAILABLE = False
+    StockPredictor = None
+    train_model_for_symbol = None
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
+
+# Global dictionary to store trained models
+trained_models = {}
+training_in_progress = set()
 
 # Stock symbols that we support
 SUPPORTED_SYMBOLS = [
     'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 
     'META', 'NVDA', 'NFLX', 'ADBE', 'CRM'
 ]
+
+def get_or_train_model(symbol):
+    """Get a trained model for the symbol, training if necessary"""
+    if not ML_AVAILABLE:
+        return None
+        
+    symbol = symbol.upper()
+    
+    if symbol in trained_models:
+        return trained_models[symbol]
+    
+    # Check if model file exists
+    predictor = StockPredictor(symbol)
+    if predictor.load_models():
+        # Also need to load recent data for predictions
+        if predictor.fetch_training_data(years=1):  # Load recent data for context
+            trained_models[symbol] = predictor
+            return predictor
+    
+    return None
+
+def train_model_async(symbol):
+    """Train model in background"""
+    if not ML_AVAILABLE:
+        print(f"ML not available for training {symbol}")
+        return
+        
+    try:
+        print(f"Starting background training for {symbol}")
+        predictor = train_model_for_symbol(symbol)
+        if predictor:
+            trained_models[symbol] = predictor
+            print(f"Background training completed for {symbol}")
+        else:
+            print(f"Background training failed for {symbol}")
+    except Exception as e:
+        print(f"Error in background training for {symbol}: {e}")
+    finally:
+        training_in_progress.discard(symbol)
 
 def get_real_time_data(symbol, period='1y'):
     """Get real-time stock data from Yahoo Finance"""
@@ -204,46 +261,91 @@ def get_historical_data(symbol):
 
 @app.route('/api/stock/<symbol>/predict', methods=['GET'])
 def predict_stock(symbol):
-    """Generate stock predictions based on current real price"""
+    """Generate ML-based stock predictions"""
     try:
         days = int(request.args.get('days', 30))
         symbol = symbol.upper()
         
         if days > 90:
             return jsonify({
-                'error': 'Maximum 90 days',
+                'error': 'Maximum 90 days prediction supported',
                 'symbol': symbol
             }), 400
         
-        # Try to get current real price
+        print(f"Generating ML predictions for {symbol} ({days} days)")
+        
+        # Try to get ML model
+        predictor = get_or_train_model(symbol) if ML_AVAILABLE else None
+        
+        if predictor:
+            # Use ML model for predictions
+            print(f"Using ML model for {symbol} predictions")
+            predictions = predictor.predict_future_prices(days)
+            
+            if predictions:
+                current_price = predictor.get_current_price()
+                return jsonify({
+                    'success': True,
+                    'symbol': symbol,
+                    'predictions': predictions,
+                    'count': len(predictions),
+                    'basePrice': current_price,
+                    'source': 'ml_model',
+                    'model_info': {
+                        'type': 'LSTM',
+                        'training_years': 10,
+                        'features': predictor.data.columns.tolist() if predictor.data is not None else []
+                    }
+                })
+        
+        # Fallback to statistical prediction if ML model not available
+        print(f"ML model not available for {symbol}, using statistical fallback")
+        
+        # Start training in background if not already training
+        if (ML_AVAILABLE and symbol not in training_in_progress and 
+            symbol in SUPPORTED_SYMBOLS):
+            training_in_progress.add(symbol)
+            thread = threading.Thread(target=train_model_async, args=(symbol,))
+            thread.daemon = True
+            thread.start()
+            print(f"Started background training for {symbol}")
+        elif not ML_AVAILABLE:
+            print(f"ML not available - using statistical prediction for {symbol}")
+        
+        # Generate statistical predictions as fallback
         try:
             ticker = yf.Ticker(symbol)
             current_price = ticker.history(period='1d')['Close'].iloc[-1]
             current_price = round(float(current_price), 2)
-            print(f"Using real current price for {symbol}: ${current_price}")
+            print(f"Using real current price for statistical prediction: ${current_price}")
         except:
-            # Fallback to mock price
             today = datetime.now()
             current_price = get_consistent_price(symbol, today.strftime('%Y-%m-%d'))
-            print(f"Using fallback current price for {symbol}: ${current_price}")
+            print(f"Using fallback current price for statistical prediction: ${current_price}")
         
         predictions = []
         for i in range(days):
             future_date = datetime.now() + timedelta(days=i+1)
             date_str = future_date.strftime('%Y-%m-%d')
             
-            # Generate prediction with slight trend
-            seed = hashlib.md5(f"{symbol}_{date_str}_pred".encode()).hexdigest()[:8]
+            # Generate prediction with trend and volatility
+            seed = hashlib.md5(f"{symbol}_{date_str}_stat_pred".encode()).hexdigest()[:8]
             random.seed(int(seed, 16))
             
-            trend = 1 + (i * 0.001)  # 0.1% daily growth
-            noise = random.uniform(-0.02, 0.02)  # ±2% volatility
-            predicted_price = current_price * trend * (1 + noise)
+            # More sophisticated statistical model
+            trend = 1 + (i * 0.0005)  # 0.05% daily growth
+            volatility = random.uniform(-0.03, 0.03)  # ±3% volatility
+            seasonal_factor = 1 + 0.01 * np.sin(i * 0.1)  # Small seasonal component
+            
+            predicted_price = current_price * trend * (1 + volatility) * seasonal_factor
+            
+            # Confidence decreases with time
+            confidence = max(0.5, 0.8 - (i * 0.01))
             
             predictions.append({
                 'date': date_str,
                 'price': round(predicted_price, 2),
-                'confidence': random.uniform(0.7, 0.95)
+                'confidence': round(confidence, 3)
             })
         
         return jsonify({
@@ -251,7 +353,9 @@ def predict_stock(symbol):
             'symbol': symbol,
             'predictions': predictions,
             'count': len(predictions),
-            'basePrice': current_price
+            'basePrice': current_price,
+            'source': 'statistical_fallback',
+            'ml_training_status': 'in_progress' if (ML_AVAILABLE and symbol in training_in_progress) else 'ml_not_available'
         })
         
     except Exception as e:
@@ -375,9 +479,37 @@ def get_company_info(symbol):
 
 @app.route('/api/stock/<symbol>/metrics', methods=['GET'])
 def get_metrics(symbol):
-    """Get model metrics"""
+    """Get model metrics - now with real ML metrics"""
     try:
-        # Generate consistent mock metrics
+        symbol = symbol.upper()
+        
+        # Try to get ML model metrics
+        predictor = get_or_train_model(symbol) if ML_AVAILABLE else None
+        
+        if predictor and predictor.metrics:
+            print(f"Returning real ML metrics for {symbol}")
+            return jsonify({
+                'success': True,
+                'symbol': symbol,
+                'metrics': {
+                    'accuracy': predictor.metrics['accuracy'] / 100,  # Convert to 0-1 range
+                    'mse': predictor.metrics['mse'],
+                    'mae': predictor.metrics['mae'],
+                    'rmse': predictor.metrics['rmse'],
+                    'r2_score': predictor.metrics['r2_score'],
+                    'lastUpdated': predictor.metrics['last_updated'],
+                    'modelName': predictor.metrics['model_name'],
+                    'confidenceScore': min(0.95, predictor.metrics['r2_score']),
+                    'predictionRange': '30 days',
+                    'features': predictor.metrics['features'],
+                    'trainingSamples': predictor.metrics['training_samples'],
+                    'testSamples': predictor.metrics['test_samples']
+                },
+                'source': 'ml_model'
+            })
+        
+        # Fallback to mock metrics
+        print(f"Using mock metrics for {symbol}")
         seed = hashlib.md5(f"{symbol}_model_metrics".encode()).hexdigest()[:8]
         random.seed(int(seed, 16))
         
@@ -388,7 +520,7 @@ def get_metrics(symbol):
             'rmse': random.uniform(0.8, 3.0),
             'r2_score': random.uniform(0.7, 0.9),
             'lastUpdated': datetime.now().isoformat(),
-            'modelName': 'LSTM',
+            'modelName': 'Statistical',
             'confidenceScore': random.uniform(0.8, 0.95),
             'predictionRange': '30 days',
             'features': ['price', 'volume', 'moving_average', 'rsi']
@@ -396,8 +528,10 @@ def get_metrics(symbol):
         
         return jsonify({
             'success': True,
-            'symbol': symbol.upper(),
-            'metrics': metrics
+            'symbol': symbol,
+            'metrics': metrics,
+            'source': 'mock_data',
+            'ml_training_status': 'in_progress' if (ML_AVAILABLE and symbol in training_in_progress) else 'ml_not_available'
         })
         
     except Exception as e:
@@ -512,6 +646,84 @@ def search_stocks():
             'results': []
         }), 500
 
+@app.route('/api/stock/<symbol>/training-status', methods=['GET'])
+def get_training_status(symbol):
+    """Get ML model training status"""
+    try:
+        symbol = symbol.upper()
+        
+        # Check if model exists
+        model_exists = os.path.exists(f"models/{symbol}_model.h5")
+        
+        # Check if currently training
+        is_training = symbol in training_in_progress
+        
+        # Check if model is loaded in memory
+        model_loaded = symbol in trained_models
+        
+        status = {
+            'symbol': symbol,
+            'model_exists': model_exists,
+            'is_training': is_training,
+            'model_loaded': model_loaded,
+            'supported': symbol in SUPPORTED_SYMBOLS
+        }
+        
+        if model_exists:
+            # Get model file age
+            model_path = f"models/{symbol}_model.h5"
+            model_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(model_path))
+            status['model_age_days'] = model_age.days
+            status['needs_retraining'] = model_age.days > 7
+        
+        return jsonify({
+            'success': True,
+            'status': status
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'symbol': symbol.upper()
+        }), 500
+
+@app.route('/api/stock/<symbol>/train', methods=['POST'])
+def trigger_training(symbol):
+    """Trigger ML model training"""
+    try:
+        symbol = symbol.upper()
+        
+        if symbol not in SUPPORTED_SYMBOLS:
+            return jsonify({
+                'error': f'Symbol {symbol} not supported',
+                'supported_symbols': SUPPORTED_SYMBOLS
+            }), 400
+        
+        if symbol in training_in_progress:
+            return jsonify({
+                'success': True,
+                'message': f'Training already in progress for {symbol}',
+                'status': 'already_training'
+            })
+        
+        # Start training in background
+        training_in_progress.add(symbol)
+        thread = threading.Thread(target=train_model_async, args=(symbol,))
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Started training for {symbol}',
+            'status': 'training_started'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'symbol': symbol.upper()
+        }), 500
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
@@ -526,8 +738,9 @@ def internal_error(error):
     }), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting Clean Stock Prediction API...")
+    print("🚀 Starting Clean Stock Prediction API with ML...")
     print("📍 Running on: http://localhost:5000")
     print("✅ All endpoints ready!")
+    print(f"🤖 ML Available: {ML_AVAILABLE}")
     
     app.run(debug=True, host='0.0.0.0', port=5000)

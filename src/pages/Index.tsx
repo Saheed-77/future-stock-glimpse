@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CompanySearch } from "@/components/CompanySearch";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { stockAPI, type PopularStock } from "@/services/stockAPI";
 import { 
   LineChart, 
   Brain, 
@@ -14,7 +16,9 @@ import {
   BarChart3,
   ArrowRight,
   TrendingDown,
-  Sparkles
+  Sparkles,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 
 interface Company {
@@ -26,6 +30,46 @@ interface Company {
 const Index = () => {
   const navigate = useNavigate();
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [popularStocks, setPopularStocks] = useState<PopularStock[]>([]);
+  const [isLoadingStocks, setIsLoadingStocks] = useState(true);
+  const [useRealData, setUseRealData] = useState(false);
+
+  useEffect(() => {
+    loadPopularStocks();
+  }, []);
+
+  const loadPopularStocks = async () => {
+    try {
+      const isBackendAvailable = await stockAPI.isBackendAvailable();
+      setUseRealData(isBackendAvailable);
+      
+      if (isBackendAvailable) {
+        const stocks = await stockAPI.getPopularStocks();
+        setPopularStocks(stocks);
+      } else {
+        // Fall back to mock data
+        const mockStocks = [
+          { symbol: "AAPL", price: 185.64, change: 2.34, changePercent: 1.28 },
+          { symbol: "GOOGL", price: 2847.29, change: -15.42, changePercent: -0.54 },
+          { symbol: "MSFT", price: 428.73, change: 8.91, changePercent: 2.12 },
+          { symbol: "TSLA", price: 219.85, change: 12.67, changePercent: 6.11 }
+        ];
+        setPopularStocks(mockStocks);
+      }
+    } catch (error) {
+      console.error('Error loading popular stocks:', error);
+      // Fall back to mock data
+      const mockStocks = [
+        { symbol: "AAPL", price: 185.64, change: 2.34, changePercent: 1.28 },
+        { symbol: "GOOGL", price: 2847.29, change: -15.42, changePercent: -0.54 },
+        { symbol: "MSFT", price: 428.73, change: 8.91, changePercent: 2.12 },
+        { symbol: "TSLA", price: 219.85, change: 12.67, changePercent: 6.11 }
+      ];
+      setPopularStocks(mockStocks);
+    } finally {
+      setIsLoadingStocks(false);
+    }
+  };
 
   const handleCompanySelect = (company: Company) => {
     setSelectedCompany(company);
@@ -49,6 +93,19 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                {useRealData ? (
+                  <div className="flex items-center gap-2 text-green-600">
+                    <Wifi className="h-4 w-4" />
+                    <span className="text-sm">Live Data</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-amber-600">
+                    <WifiOff className="h-4 w-4" />
+                    <span className="text-sm">Demo Mode</span>
+                  </div>
+                )}
+              </div>
               <CompanySearch 
                 onCompanySelect={handleCompanySelect}
                 selectedCompany={selectedCompany}
@@ -157,36 +214,48 @@ const Index = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { symbol: "AAPL", name: "Apple Inc.", price: 185.64, change: +2.34, changePercent: +1.28 },
-                { symbol: "GOOGL", name: "Alphabet Inc.", price: 2847.29, change: -15.42, changePercent: -0.54 },
-                { symbol: "MSFT", name: "Microsoft Corp.", price: 428.73, change: +8.91, changePercent: +2.12 },
-                { symbol: "TSLA", name: "Tesla Inc.", price: 219.85, change: +12.67, changePercent: +6.11 }
-              ].map((stock) => (
-                <Card 
-                  key={stock.symbol} 
-                  className="cursor-pointer bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300 transform hover:scale-105"
-                  onClick={() => navigate(`/stock/${stock.symbol.toLowerCase()}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-bold text-foreground">{stock.symbol}</div>
-                      <div className={`p-2 rounded-full ${stock.change >= 0 ? 'bg-chart-secondary/10' : 'bg-chart-danger/10'}`}>
-                        {stock.change >= 0 ? (
-                          <TrendingUp className="h-4 w-4 text-chart-secondary" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 text-chart-danger" />
-                        )}
+              {isLoadingStocks ? (
+                // Loading skeletons
+                [...Array(4)].map((_, i) => (
+                  <Card key={i} className="bg-gradient-card border-border shadow-card">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Skeleton className="h-4 w-12" />
+                        <Skeleton className="h-8 w-8 rounded-full" />
                       </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground mb-2">{stock.name}</div>
-                    <div className="text-lg font-bold text-foreground">${stock.price.toFixed(2)}</div>
-                    <div className={`text-xs font-medium ${stock.change >= 0 ? 'text-chart-secondary' : 'text-chart-danger'}`}>
-                      {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.change >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <Skeleton className="h-3 w-24 mb-2" />
+                      <Skeleton className="h-6 w-20 mb-1" />
+                      <Skeleton className="h-3 w-16" />
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                // Actual stock data
+                popularStocks.map((stock) => (
+                  <Card 
+                    key={stock.symbol} 
+                    className="cursor-pointer bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300 transform hover:scale-105"
+                    onClick={() => navigate(`/stock/${stock.symbol.toLowerCase()}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-bold text-foreground">{stock.symbol}</div>
+                        <div className={`p-2 rounded-full ${stock.change >= 0 ? 'bg-chart-secondary/10' : 'bg-chart-danger/10'}`}>
+                          {stock.change >= 0 ? (
+                            <TrendingUp className="h-4 w-4 text-chart-secondary" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 text-chart-danger" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-lg font-bold text-foreground">${stock.price.toFixed(2)}</div>
+                      <div className={`text-xs font-medium ${stock.change >= 0 ? 'text-chart-secondary' : 'text-chart-danger'}`}>
+                        {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.change >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
         </div>

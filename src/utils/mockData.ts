@@ -3,6 +3,11 @@
 export interface StockDataPoint {
   date: string;
   price: number;
+  volume?: number;
+  high?: number;
+  low?: number;
+  open?: number;
+  confidence?: number;
 }
 
 export interface CompanyData {
@@ -19,7 +24,7 @@ export interface CompanyData {
   low52Week: number;
 }
 
-// Generate mock historical data for the last 30 days
+// Generate mock historical data for the last N days
 export const generateHistoricalData = (basePrice: number, days: number = 30): StockDataPoint[] => {
   const data: StockDataPoint[] = [];
   let currentPrice = basePrice;
@@ -32,16 +37,26 @@ export const generateHistoricalData = (basePrice: number, days: number = 30): St
     const changePercent = (Math.random() - 0.5) * 0.06; // ±3% max daily change
     currentPrice = currentPrice * (1 + changePercent);
     
+    // Generate OHLC data
+    const open = currentPrice * (1 + (Math.random() - 0.5) * 0.02);
+    const high = Math.max(open, currentPrice) * (1 + Math.random() * 0.03);
+    const low = Math.min(open, currentPrice) * (1 - Math.random() * 0.03);
+    const volume = Math.floor(Math.random() * 10000000) + 1000000; // 1M to 11M volume
+    
     data.push({
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      price: parseFloat(currentPrice.toFixed(2))
+      date: date.toISOString().split('T')[0], // YYYY-MM-DD format
+      price: parseFloat(currentPrice.toFixed(2)),
+      open: parseFloat(open.toFixed(2)),
+      high: parseFloat(high.toFixed(2)),
+      low: parseFloat(low.toFixed(2)),
+      volume: volume
     });
   }
   
   return data;
 };
 
-// Generate mock prediction data for the next 30 days
+// Generate mock prediction data for the next N days
 export const generatePredictionData = (currentPrice: number, days: number = 30): StockDataPoint[] => {
   const data: StockDataPoint[] = [];
   let price = currentPrice;
@@ -57,9 +72,13 @@ export const generatePredictionData = (currentPrice: number, days: number = 30):
     const dailyChange = trendFactor + (Math.random() - 0.5) * 0.04; // ±2% volatility
     price = price * (1 + dailyChange);
     
+    // Decreasing confidence over time
+    const confidence = 0.8 - (i * 0.01);
+    
     data.push({
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      price: parseFloat(price.toFixed(2))
+      date: date.toISOString().split('T')[0], // YYYY-MM-DD format
+      price: parseFloat(price.toFixed(2)),
+      confidence: Math.max(0.5, confidence) // Minimum 50% confidence
     });
   }
   
@@ -137,8 +156,16 @@ export const mockCompanyData: Record<string, CompanyData> = {
 
 // Mock model metrics
 export const mockModelMetrics = {
-  modelName: 'LSTM Neural Network v2.1',
+  // API format
+  mse: 0.0023,
+  mae: 0.0156,
   accuracy: 87.3,
+  rmse: 0.0479,
+  r2_score: 0.873,
+  testSamples: 150,
+  lastUpdated: '2024-01-15T14:30:00Z',
+  // Mock data format (for compatibility)
+  modelName: 'LSTM Neural Network v2.1',
   confidenceScore: 79.2,
   predictionRange: '30 Days',
   lastTrained: '2024-01-15 14:30 UTC',

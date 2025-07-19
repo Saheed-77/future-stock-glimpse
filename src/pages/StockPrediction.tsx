@@ -35,6 +35,8 @@ const StockPrediction = () => {
   const [predictionData, setPredictionData] = useState<PredictionData[]>([]);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [modelMetrics, setModelMetrics] = useState<APIModelMetrics | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('1y');
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
 
   useEffect(() => {
     if (symbol) {
@@ -72,7 +74,7 @@ const StockPrediction = () => {
     try {
       // Load data in parallel
       const [historical, predictions, company, metrics] = await Promise.allSettled([
-        stockAPI.getHistoricalData(stockSymbol, '1y'),
+        stockAPI.getHistoricalData(stockSymbol, selectedPeriod),
         stockAPI.predictStockPrice(stockSymbol, 30),
         stockAPI.getCompanyInfo(stockSymbol),
         stockAPI.getModelMetrics(stockSymbol)
@@ -126,6 +128,32 @@ const StockPrediction = () => {
     }
   };
 
+  const handlePeriodChange = async (period: string) => {
+    if (!selectedCompany) return;
+    
+    setSelectedPeriod(period);
+    setIsLoadingChart(true);
+    
+    try {
+      if (useRealData) {
+        const historical = await stockAPI.getHistoricalData(selectedCompany.symbol, period);
+        setHistoricalData(historical);
+      } else {
+        // Generate mock data for the selected period
+        const mockCompany = mockCompanyData[selectedCompany.symbol];
+        if (mockCompany) {
+          const days = period === '30d' ? 30 : period === '6m' ? 180 : 365;
+          const mockHistorical = generateHistoricalData(mockCompany.currentPrice, days);
+          setHistoricalData(mockHistorical);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading data for period:', err);
+    } finally {
+      setIsLoadingChart(false);
+    }
+  };
+
   const loadMockData = (stockSymbol: string) => {
     const mockCompany = mockCompanyData[stockSymbol];
     if (mockCompany) {
@@ -135,8 +163,9 @@ const StockPrediction = () => {
         industry: mockCompany.industry
       });
       
-      // Convert mock data to API format
-      const mockHistorical = generateHistoricalData(mockCompany.currentPrice, 365);
+      // Convert mock data to API format with selected period
+      const days = selectedPeriod === '30d' ? 30 : selectedPeriod === '6m' ? 180 : 365;
+      const mockHistorical = generateHistoricalData(mockCompany.currentPrice, days);
       const mockPredictions = generatePredictionData(mockCompany.currentPrice, 30);
       
       setHistoricalData(mockHistorical);
@@ -324,18 +353,43 @@ const StockPrediction = () => {
           />
 
           {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <StockChart
-              data={historicalData}
-              title="Historical Price (1 Year)"
-              variant="primary"
-            />
-            <StockChart
-              data={predictionData}
-              title="AI Prediction (30 Days)"
-              variant="secondary"
-              isPrediction={true}
-            />
+          <div className="space-y-6">
+            {/* Time Period Filter */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">Historical Data</h3>
+              <div className="flex items-center gap-2">
+                {['30d', '6m', '1y'].map((period) => (
+                  <Button
+                    key={period}
+                    variant={selectedPeriod === period ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePeriodChange(period)}
+                    disabled={isLoadingChart}
+                    className="min-w-[60px]"
+                  >
+                    {isLoadingChart && selectedPeriod === period ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      period === '30d' ? '30D' : period === '6m' ? '6M' : '1Y'
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <StockChart
+                data={historicalData}
+                title={`Historical Price (${selectedPeriod === '30d' ? '30 Days' : selectedPeriod === '6m' ? '6 Months' : '1 Year'})`}
+                variant="primary"
+              />
+              <StockChart
+                data={predictionData}
+                title="AI Prediction (30 Days)"
+                variant="secondary"
+                isPrediction={true}
+              />
+            </div>
           </div>
 
           {/* Profit/Loss Analysis */}

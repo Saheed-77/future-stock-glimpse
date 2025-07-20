@@ -223,18 +223,55 @@ def get_consistent_price(symbol, date_str):
     variation = random.uniform(-0.1, 0.1)  # ±10%
     return round(base * (1 + variation), 2)
 
-def create_and_predict_model(data):
-    """
-    This function creates, trains, and uses an LSTM model to predict the next day's stock price.
+def calculate_technical_indicators(data):
+    """Calculate technical indicators for stock analysis"""
+    df = data.copy()
     
-    Args:
-        data (pd.DataFrame): DataFrame with historical stock data, must contain a 'Close' column.
-        
-    Returns:
-        float: The predicted stock price for the next day.
+    # Simple Moving Averages
+    df['SMA_5'] = df['Close'].rolling(window=5).mean()
+    df['SMA_10'] = df['Close'].rolling(window=10).mean()
+    df['SMA_20'] = df['Close'].rolling(window=20).mean()
+    
+    # Exponential Moving Average
+    df['EMA_12'] = df['Close'].ewm(span=12).mean()
+    df['EMA_26'] = df['Close'].ewm(span=26).mean()
+    
+    # MACD
+    df['MACD'] = df['EMA_12'] - df['EMA_26']
+    df['MACD_signal'] = df['MACD'].ewm(span=9).mean()
+    
+    # RSI (Relative Strength Index)
+    delta = df['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    df['RSI'] = 100 - (100 / (1 + rs))
+    
+    # Bollinger Bands
+    df['BB_middle'] = df['Close'].rolling(window=20).mean()
+    bb_std = df['Close'].rolling(window=20).std()
+    df['BB_upper'] = df['BB_middle'] + (bb_std * 2)
+    df['BB_lower'] = df['BB_middle'] - (bb_std * 2)
+    
+    # Volume indicators
+    df['Volume_SMA'] = df['Volume'].rolling(window=10).mean()
+    df['Volume_ratio'] = df['Volume'] / df['Volume_SMA']
+    
+    # Price momentum
+    df['Price_momentum'] = df['Close'] / df['Close'].shift(5)
+    
+    # Volatility
+    df['Volatility'] = df['Close'].pct_change().rolling(window=10).std()
+    
+    return df
+
+def advanced_prediction_model(data):
     """
-    if not ENABLE_LSTM:
-        print("LSTM not available, using fallback prediction")
+    Advanced stock prediction using multiple ML models and technical analysis
+    Works without TensorFlow - uses scikit-learn models
+    """
+    if not ML_AVAILABLE:
+        print("Advanced ML not available, using simple trend")
         # Simple linear trend fallback
         if not data.empty and len(data) >= 5:
             recent_prices = data['Close'].tail(5).values
@@ -243,87 +280,165 @@ def create_and_predict_model(data):
         return float(data['Close'].iloc[-1]) if not data.empty else 0.0
     
     try:
-        print("Creating LSTM model for prediction...")
+        from sklearn.linear_model import LinearRegression
+        from sklearn.ensemble import RandomForestRegressor
         
-        # 1. Data Preparation
-        # Use the 'Close' price for prediction
-        dataset = data['Close'].values.reshape(-1, 1)
+        print("Creating advanced ML model for prediction...")
         
-        # Scale the data to be between 0 and 1
-        scaler = MinMaxScaler(feature_range=(0, 1))
-        scaled_dataset = scaler.fit_transform(dataset)
+        # Calculate technical indicators
+        data_with_indicators = calculate_technical_indicators(data)
         
-        # 2. Create Training Data
-        # We use the last 60 days of data to predict the next day's price
-        X_train = []
-        y_train = []
-        look_back = 60
+        # Prepare features for prediction
+        feature_columns = [
+            'Open', 'High', 'Low', 'Volume',
+            'SMA_5', 'SMA_10', 'SMA_20',
+            'EMA_12', 'EMA_26', 'MACD', 'MACD_signal',
+            'RSI', 'BB_middle', 'BB_upper', 'BB_lower',
+            'Volume_ratio', 'Price_momentum', 'Volatility'
+        ]
         
-        # Ensure we have enough data to create sequences
-        if len(scaled_dataset) <= look_back:
-            # If not enough data, return the last known close price as a simple fallback
-            print(f"Not enough data for LSTM (need {look_back}, got {len(scaled_dataset)})")
-            return float(scaler.inverse_transform(scaled_dataset[[-1]])[0][0])
-
-        for i in range(look_back, len(scaled_dataset)):
-            X_train.append(scaled_dataset[i-look_back:i, 0])
-            y_train.append(scaled_dataset[i, 0])
-            
-        # Convert lists to numpy arrays for the model
-        X_train, y_train = np.array(X_train), np.array(y_train)
-        # Reshape X_train for the LSTM model [samples, time_steps, features]
-        X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+        # Remove NaN values
+        clean_data = data_with_indicators.dropna()
         
-        print(f"Training data shape: {X_train.shape}")
-        
-        # 3. Build the LSTM Model
-        model = Sequential([
-            # First LSTM layer with dropout for regularization
-            LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)),
-            Dropout(0.2),
-            # Second LSTM layer
-            LSTM(units=50, return_sequences=True),
-            Dropout(0.2),
-            # Third LSTM layer
-            LSTM(units=50),
-            Dropout(0.2),
-            # Output layer - a single neuron for the predicted price
-            Dense(units=1)
-        ])
-        
-        # Compile the model
-        model.compile(optimizer='adam', loss='mean_squared_error')
-        
-        # 4. Train the Model
-        print("Training LSTM model...")
-        model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=0)
-        
-        # 5. Make a Prediction
-        # Get the last 'look_back' days from the original data
-        last_sequence = scaled_dataset[-look_back:]
-        # Reshape it for prediction
-        last_sequence = np.reshape(last_sequence, (1, look_back, 1))
-        
-        # Predict the next price
-        predicted_price_scaled = model.predict(last_sequence, verbose=0)
-        # Inverse the scaling to get the actual price
-        predicted_price = scaler.inverse_transform(predicted_price_scaled)
-        
-        print(f"LSTM prediction completed: ${predicted_price[0][0]:.2f}")
-        return float(predicted_price[0][0])
-
-    except Exception as e:
-        print(f"An error occurred in LSTM model prediction: {e}")
-        # Fallback: return the most recent closing price if prediction fails
-        if not data.empty:
+        if len(clean_data) < 50:
+            print(f"Insufficient clean data for advanced ML (need 50, got {len(clean_data)})")
             return float(data['Close'].iloc[-1])
-        return 0.0
+        
+        # Prepare training data
+        X = clean_data[feature_columns].values
+        y = clean_data['Close'].values
+        
+        # Use last 80% for training
+        split_idx = int(len(X) * 0.8)
+        X_train = X[:split_idx]
+        y_train = y[:split_idx]
+        
+        # Scale features
+        scaler_X = MinMaxScaler()
+        scaler_y = MinMaxScaler()
+        
+        X_train_scaled = scaler_X.fit_transform(X_train)
+        y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
+        
+        # Train ensemble of models
+        models = [
+            LinearRegression(),
+            RandomForestRegressor(n_estimators=50, random_state=42)
+        ]
+        
+        predictions = []
+        for model in models:
+            model.fit(X_train_scaled, y_train_scaled)
+            
+            # Make prediction using last available data
+            last_features = scaler_X.transform(X[-1].reshape(1, -1))
+            pred_scaled = model.predict(last_features)
+            pred = scaler_y.inverse_transform(pred_scaled.reshape(-1, 1))[0][0]
+            predictions.append(pred)
+        
+        # Ensemble prediction (average)
+        ensemble_prediction = np.mean(predictions)
+        
+        print(f"Advanced ML prediction completed: ${ensemble_prediction:.2f}")
+        return float(ensemble_prediction)
+        
+    except Exception as e:
+        print(f"Error in advanced ML prediction: {e}")
+        # Fallback to simple trend
+        if not data.empty and len(data) >= 5:
+            recent_prices = data['Close'].tail(5).values
+            trend = (recent_prices[-1] - recent_prices[0]) / len(recent_prices)
+            return float(recent_prices[-1] + trend)
+        return float(data['Close'].iloc[-1]) if not data.empty else 0.0
+
+def create_and_predict_model(data):
+    """
+    This function creates, trains, and uses ML models to predict the next day's stock price.
+    Uses advanced ML techniques (Linear Regression + Random Forest) instead of LSTM.
+    
+    Args:
+        data (pd.DataFrame): DataFrame with historical stock data, must contain a 'Close' column.
+        
+    Returns:
+        float: The predicted stock price for the next day.
+    """
+    if ENABLE_LSTM:
+        # Try LSTM if available
+        try:
+            print("Creating LSTM model for prediction...")
+            
+            # 1. Data Preparation
+            dataset = data['Close'].values.reshape(-1, 1)
+            
+            # Scale the data to be between 0 and 1
+            scaler = MinMaxScaler(feature_range=(0, 1))
+            scaled_dataset = scaler.fit_transform(dataset)
+            
+            # 2. Create Training Data
+            X_train = []
+            y_train = []
+            look_back = 60
+            
+            # Ensure we have enough data to create sequences
+            if len(scaled_dataset) <= look_back:
+                print(f"Not enough data for LSTM (need {look_back}, got {len(scaled_dataset)})")
+                return advanced_prediction_model(data)
+
+            for i in range(look_back, len(scaled_dataset)):
+                X_train.append(scaled_dataset[i-look_back:i, 0])
+                y_train.append(scaled_dataset[i, 0])
+                
+            # Convert lists to numpy arrays for the model
+            X_train, y_train = np.array(X_train), np.array(y_train)
+            X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+            
+            # 3. Build the LSTM Model
+            model = Sequential([
+                LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)),
+                Dropout(0.2),
+                LSTM(units=50, return_sequences=True),
+                Dropout(0.2),
+                LSTM(units=50),
+                Dropout(0.2),
+                Dense(units=1)
+            ])
+            
+            # Compile and train
+            model.compile(optimizer='adam', loss='mean_squared_error')
+            model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=0)
+            
+            # Make prediction
+            last_sequence = scaled_dataset[-look_back:]
+            last_sequence = np.reshape(last_sequence, (1, look_back, 1))
+            
+            predicted_price_scaled = model.predict(last_sequence, verbose=0)
+            predicted_price = scaler.inverse_transform(predicted_price_scaled)
+            
+            print(f"LSTM prediction completed: ${predicted_price[0][0]:.2f}")
+            return float(predicted_price[0][0])
+            
+        except Exception as e:
+            print(f"LSTM prediction failed: {e}")
+            print("Falling back to advanced ML prediction...")
+            return advanced_prediction_model(data)
+    else:
+        # Use advanced ML prediction as primary method
+        print("LSTM not available, using advanced ML prediction...")
+        return advanced_prediction_model(data)
 
 # ===== API ENDPOINTS =====
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint with ML capability status"""
+    prediction_method = "None"
+    if ENABLE_LSTM:
+        prediction_method = "LSTM (TensorFlow/Keras)"
+    elif ML_AVAILABLE:
+        prediction_method = "Advanced ML (Linear Regression + Random Forest)"
+    else:
+        prediction_method = "Statistical (Trend Analysis)"
+    
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
@@ -331,8 +446,10 @@ def health_check():
         'capabilities': {
             'basic_ml': ML_AVAILABLE,
             'lstm_prediction': ENABLE_LSTM,
+            'advanced_ml': ML_AVAILABLE,
             'real_time_data': True,
-            'fallback_data': True
+            'fallback_data': True,
+            'prediction_method': prediction_method
         },
         'endpoints': [
             '/api/health',
@@ -913,16 +1030,20 @@ if __name__ == '__main__':
     # Show capability status
     if ENABLE_LSTM:
         print("🧠 LSTM prediction: ENABLED")
+    elif ML_AVAILABLE:
+        print("🤖 Advanced ML prediction: ENABLED (Linear Regression + Random Forest)")
+        print("⚠️  LSTM prediction: DISABLED (TensorFlow not available)")
+        print("   To enable LSTM: pip install tensorflow")
     else:
-        print("⚠️  LSTM prediction: DISABLED (using fallback methods)")
-        print("   Install: pip install tensorflow keras")
+        print("⚠️  ML prediction: DISABLED (using statistical methods)")
+        print("   Install: pip install numpy pandas scikit-learn")
     
     print("\n📚 Available endpoints:")
     print("   GET /api/health - Health check with capabilities")
-    print("   GET /api/stock/<symbol>/predict - Enhanced predictions (with LSTM if available)")
-    print("   GET /api/predict_lstm?symbol=<symbol> - Dedicated LSTM endpoint")
+    print("   GET /api/stock/<symbol>/predict - Enhanced predictions")
+    print("   GET /api/predict_lstm?symbol=<symbol> - ML prediction endpoint")
     print("   GET /api/stock_data?symbol=<symbol> - Historical data")
-    print("   GET /api/stock/<symbol>/historical - Historical data (existing)")
+    print("   GET /api/stock/<symbol>/historical - Historical data")
     print("   GET /api/stock/<symbol>/company-info - Company information")
     print("   GET /api/stocks/popular - Popular stocks")
     print("   GET /api/stocks/search - Search stocks")

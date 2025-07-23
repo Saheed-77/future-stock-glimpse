@@ -39,11 +39,21 @@ After deployment, Render will provide a URL like:
 
 ## Frontend Deployment (Vercel)
 
-### 1. Set Environment Variables in Vercel
+### 1. Deploy to Vercel First
 
 1. Go to [Vercel.com](https://vercel.com) and sign up/login
-2. Import your project from GitHub
-3. Go to Project Settings → Environment Variables
+2. Click "New Project"
+3. Import your project from GitHub
+4. Vercel will automatically detect it's a Vite project
+5. Click "Deploy" (it will use default settings initially)
+
+### 2. Set Environment Variables in Vercel
+
+After your initial deployment:
+
+1. Go to your project dashboard in Vercel
+2. Click on "Settings" tab
+3. Click on "Environment Variables" in the sidebar
 4. Add the following variable:
 
 ```
@@ -51,12 +61,18 @@ Name: VITE_API_BASE_URL
 Value: https://your-backend-name.onrender.com/api
 ```
 
-Replace `your-backend-name` with your actual Render service name.
+**Important**: Replace `your-backend-name` with your actual Render service name.
 
-### 2. Deploy
+### 3. Redeploy
 
-1. Vercel will automatically deploy your frontend
-2. You'll get a URL like: `https://your-app.vercel.app`
+1. After adding the environment variable, go to the "Deployments" tab
+2. Click the three dots (...) on the latest deployment
+3. Click "Redeploy" to apply the new environment variable
+
+### 4. Get Your Frontend URL
+
+Your Vercel app will be available at a URL like:
+`https://your-app.vercel.app` or `https://your-repo-name.vercel.app`
 
 ### 3. Update Backend CORS
 
@@ -97,6 +113,14 @@ FRONTEND_URL=http://localhost:8080
 2. **API Not Found**: Ensure `VITE_API_BASE_URL` points to your Render backend with `/api` suffix
 3. **Build Failures**: Check that all dependencies are in `requirements.txt`
 4. **Environment Variables**: Ensure all required environment variables are set in both platforms
+5. **"Environment Variable references Secret which does not exist"**: 
+   - This happens when `vercel.json` references secrets incorrectly
+   - Environment variables should be set in Vercel dashboard, not in `vercel.json`
+   - The `vercel.json` file should not contain `env` or `build.env` sections referencing secrets
+6. **Environment variables not working**: 
+   - Make sure to redeploy after adding environment variables in Vercel
+   - Environment variables in Vite must start with `VITE_`
+   - Check that `import.meta.env.VITE_API_BASE_URL` is accessible in your code
 
 ### Logs:
 - **Render**: Check logs in your Render dashboard

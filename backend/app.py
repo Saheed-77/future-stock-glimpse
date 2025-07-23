@@ -1116,4 +1116,4 @@ if __name__ == '__main__':
     print("   GET /api/stocks/popular - Popular stocks")
     print("   GET /api/stocks/search - Search stocks")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+

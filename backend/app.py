@@ -45,17 +45,12 @@ ENABLE_LSTM = ML_AVAILABLE and LSTM_AVAILABLE
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure CORS for production
-if os.getenv('FLASK_ENV') == 'production':
-    # Production CORS settings - allow your Vercel domain
-    allowed_origins = [
-        os.getenv('FRONTEND_URL', 'https://your-app.vercel.app'),
-        'https://*.vercel.app'
-    ]
-    CORS(app, origins=allowed_origins, supports_credentials=True)
-else:
-    # Development CORS settings - allow localhost
-    CORS(app, origins=['http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080'], supports_credentials=True)
+# Configure CORS 
+frontend = os.getenv('FRONTEND_URL', 'https://localhost:8080')  # Default to your Vercel domain
+CORS(app, 
+     origins=[frontend], 
+     supports_credentials=True
+)
 
 # Stock symbols that we support
 SUPPORTED_SYMBOLS = [

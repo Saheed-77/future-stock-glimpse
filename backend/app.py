@@ -46,7 +46,7 @@ ENABLE_LSTM = ML_AVAILABLE and LSTM_AVAILABLE
 app = Flask(__name__)
 
 # Configure CORS 
-frontend = os.getenv('FRONTEND_URL', 'https://localhost:8080')  # Default to your Vercel domain
+frontend = os.getenv('FRONTEND_URL', '*')  # Default to your Vercel domain
 CORS(app, 
      origins=[frontend], 
      supports_credentials=True
@@ -1128,5 +1128,5 @@ if __name__ == '__main__':
     print("   GET /api/stocks/search - Search stocks")
     
     # Use debug=False in production
-    debug_mode = os.getenv('FLASK_ENV') != 'production'
+    #debug_mode = os.getenv('FLASK_ENV') != 'production'
 

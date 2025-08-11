@@ -44,7 +44,13 @@ ENABLE_LSTM = ML_AVAILABLE and LSTM_AVAILABLE
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS 
+frontend = os.getenv('FRONTEND_URL', '*')  # Default to your Vercel domain
+CORS(app, 
+     origins=[frontend], 
+     supports_credentials=True
+)
 
 # Stock symbols that we support
 SUPPORTED_SYMBOLS = [
@@ -1092,7 +1098,12 @@ def internal_error(error):
 
 if __name__ == '__main__':
     print("🚀 Starting Enhanced Stock Prediction API...")
-    print("📍 Running on: http://localhost:5000")
+    
+    # Get port from environment variable (Render provides this)
+    port = int(os.getenv('PORT', 5000))
+    host = os.getenv('HOST', '0.0.0.0')
+    
+    print(f"📍 Running on: http://{host}:{port}")
     print("✅ All endpoints ready!")
     
     # Show capability status
@@ -1116,4 +1127,6 @@ if __name__ == '__main__':
     print("   GET /api/stocks/popular - Popular stocks")
     print("   GET /api/stocks/search - Search stocks")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Use debug=False in production
+    #debug_mode = os.getenv('FLASK_ENV') != 'production'
+

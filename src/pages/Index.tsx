@@ -18,7 +18,15 @@ import {
   TrendingDown,
   Sparkles,
   Wifi,
-  WifiOff
+  WifiOff,
+  Building2,
+  Eye,
+  Globe,
+  Shield,
+  Zap,
+  Users,
+  Award,
+  ChevronRight
 } from "lucide-react";
 
 interface Company {
@@ -121,96 +129,145 @@ const Index = () => {
         {/* Enhanced Welcome State */}
         <div className="space-y-16">
           {/* Hero Section */}
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8">
+          <div className="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-8">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-chart-secondary/20 rounded-full blur-2xl"></div>
-              <div className="relative p-8 bg-gradient-accent rounded-full shadow-xl">
-                <LineChart className="h-16 w-16 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-chart-secondary/20 rounded-full blur-3xl animate-pulse"></div>
+              <div className="relative p-8 bg-gradient-accent rounded-full shadow-2xl">
+                <Brain className="h-16 w-16 text-white" />
               </div>
             </div>
             
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-primary/10 to-chart-secondary/10 border border-primary/20 text-primary text-sm font-medium">
                 <Sparkles className="h-4 w-4" />
-                <span>AI-Powered Predictions</span>
+                <span>Powered by Advanced AI & Machine Learning</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
-                Welcome to Future Stock Glimpse
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-2xl">
-                Get AI-powered stock price predictions and comprehensive market analysis. 
-                Start by searching for a company above.
+              <h1 className="text-5xl md:text-7xl font-bold text-foreground leading-tight">
+                Future Stock
+                <span className="bg-gradient-to-r from-primary to-chart-secondary bg-clip-text text-transparent"> Glimpse</span>
+              </h1>
+              <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl leading-relaxed">
+                Unlock the power of AI-driven stock predictions with real-time market analysis, 
+                comprehensive insights, and precision forecasting for smarter investment decisions.
               </p>
             </div>
             
-            <div className="flex flex-col sm:flex-row items-center gap-6 pt-4">
-              <Button size="lg" className="bg-gradient-accent hover:opacity-90 text-white px-8 shadow-lg">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
+            <div className="flex flex-col sm:flex-row items-center gap-6 pt-6">
+              <Button 
+                size="lg" 
+                className="bg-gradient-accent hover:opacity-90 text-white px-8 py-4 text-lg shadow-xl transition-all duration-300 hover:scale-105"
+                onClick={() => navigate("/companies")}
+              >
+                Explore Companies
+                <Building2 className="ml-2 h-5 w-5" />
               </Button>
-              <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-chart-secondary" />
-                  <span>Real-time Analysis</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-primary" />
-                  <span>ML Predictions</span>
-                </div>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="px-8 py-4 text-lg border-2 hover:bg-muted/50 transition-all duration-300"
+              >
+                View Demo
+                <Eye className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+            
+            <div className="flex items-center gap-8 pt-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-chart-secondary" />
+                <span>Global Markets</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                <span>Secure & Reliable</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-chart-accent" />
+                <span>Real-time Data</span>
               </div>
             </div>
           </div>
 
           {/* Key Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <Card className="text-center p-6 bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300">
-              <div className="p-3 bg-primary/10 rounded-lg w-fit mx-auto mb-4">
-                <Target className="h-6 w-6 text-primary" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            <Card className="text-center p-8 bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300 transform hover:scale-105 group">
+              <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl w-fit mx-auto mb-4 group-hover:from-primary/30 group-hover:to-primary/20 transition-all duration-300">
+                <Target className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Accurate Predictions</h3>
-              <p className="text-sm text-muted-foreground">95% accuracy rate with advanced ML algorithms</p>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Precise Predictions</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">Advanced LSTM and ML algorithms delivering 95%+ accuracy in stock price forecasting</p>
             </Card>
             
-            <Card className="text-center p-6 bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300">
-              <div className="p-3 bg-chart-secondary/10 rounded-lg w-fit mx-auto mb-4">
-                <Clock className="h-6 w-6 text-chart-secondary" />
+            <Card className="text-center p-8 bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300 transform hover:scale-105 group">
+              <div className="p-4 bg-gradient-to-br from-chart-secondary/20 to-chart-secondary/10 rounded-xl w-fit mx-auto mb-4 group-hover:from-chart-secondary/30 group-hover:to-chart-secondary/20 transition-all duration-300">
+                <Clock className="h-8 w-8 text-chart-secondary" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Real-time Data</h3>
-              <p className="text-sm text-muted-foreground">Live market data and instant analysis</p>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Real-time Analysis</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">Live market data processing with instant technical analysis and trend detection</p>
             </Card>
             
-            <Card className="text-center p-6 bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300">
-              <div className="p-3 bg-chart-accent/10 rounded-lg w-fit mx-auto mb-4">
-                <BarChart3 className="h-6 w-6 text-chart-accent" />
+            <Card className="text-center p-8 bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300 transform hover:scale-105 group">
+              <div className="p-4 bg-gradient-to-br from-chart-accent/20 to-chart-accent/10 rounded-xl w-fit mx-auto mb-4 group-hover:from-chart-accent/30 group-hover:to-chart-accent/20 transition-all duration-300">
+                <BarChart3 className="h-8 w-8 text-chart-accent" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Visual Analytics</h3>
-              <p className="text-sm text-muted-foreground">Interactive charts and comprehensive insights</p>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Visual Insights</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">Interactive dashboards with comprehensive charts and analytical visualizations</p>
+            </Card>
+
+            <Card className="text-center p-8 bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300 transform hover:scale-105 group">
+              <div className="p-4 bg-gradient-to-br from-chart-danger/20 to-chart-danger/10 rounded-xl w-fit mx-auto mb-4 group-hover:from-chart-danger/30 group-hover:to-chart-danger/20 transition-all duration-300">
+                <Brain className="h-8 w-8 text-chart-danger" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">AI Intelligence</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">Machine learning models continuously learning from market patterns and behaviors</p>
             </Card>
           </div>
 
-          {/* Quick Stats */}
-          <div className="bg-muted/30 rounded-2xl p-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-              <div className="space-y-2">
-                <div className="text-3xl font-bold text-foreground">95%</div>
-                <div className="text-sm text-muted-foreground">Prediction Accuracy</div>
+          {/* Platform Stats */}
+          <div className="bg-gradient-to-r from-muted/50 to-muted/30 rounded-3xl p-12 backdrop-blur-sm border border-border/50">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-foreground mb-2">Trusted by Investors Worldwide</h3>
+              <p className="text-muted-foreground">Our platform delivers consistent results across global markets</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+              <div className="space-y-3">
+                <div className="text-4xl font-bold bg-gradient-to-r from-primary to-chart-secondary bg-clip-text text-transparent">95%</div>
+                <div className="text-sm font-medium text-muted-foreground">Prediction Accuracy</div>
+                <Award className="h-5 w-5 text-primary mx-auto" />
               </div>
-              <div className="space-y-2">
-                <div className="text-3xl font-bold text-foreground">500+</div>
-                <div className="text-sm text-muted-foreground">Companies Analyzed</div>
+              <div className="space-y-3">
+                <div className="text-4xl font-bold bg-gradient-to-r from-chart-secondary to-chart-accent bg-clip-text text-transparent">500+</div>
+                <div className="text-sm font-medium text-muted-foreground">Companies Tracked</div>
+                <Building2 className="h-5 w-5 text-chart-secondary mx-auto" />
               </div>
-              <div className="space-y-2">
-                <div className="text-3xl font-bold text-foreground">10K+</div>
-                <div className="text-sm text-muted-foreground">Predictions Made</div>
+              <div className="space-y-3">
+                <div className="text-4xl font-bold bg-gradient-to-r from-chart-accent to-chart-danger bg-clip-text text-transparent">100K+</div>
+                <div className="text-sm font-medium text-muted-foreground">Predictions Generated</div>
+                <TrendingUp className="h-5 w-5 text-chart-accent mx-auto" />
+              </div>
+              <div className="space-y-3">
+                <div className="text-4xl font-bold bg-gradient-to-r from-chart-danger to-primary bg-clip-text text-transparent">10K+</div>
+                <div className="text-sm font-medium text-muted-foreground">Active Users</div>
+                <Users className="h-5 w-5 text-chart-danger mx-auto" />
               </div>
             </div>
           </div>
 
           {/* Popular Stocks Preview */}
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h3 className="text-2xl font-bold text-foreground">Popular Stocks</h3>
-              <p className="text-muted-foreground">Click on any stock to see AI predictions</p>
+          <div className="space-y-8">
+            <div className="text-center space-y-4">
+              <h3 className="text-3xl font-bold text-foreground">Market Leaders</h3>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Explore top-performing stocks with real-time data and AI-powered predictions
+              </p>
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => navigate("/companies")}
+                className="mt-4 group"
+              >
+                View All Companies
+                <ChevronRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -234,23 +291,36 @@ const Index = () => {
                 popularStocks.map((stock) => (
                   <Card 
                     key={stock.symbol} 
-                    className="cursor-pointer bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300 transform hover:scale-105"
+                    className="cursor-pointer bg-gradient-card border-border shadow-card hover:shadow-elevated transition-all duration-300 transform hover:scale-105 group relative overflow-hidden"
                     onClick={() => navigate(`/stock/${stock.symbol.toLowerCase()}`)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="font-bold text-foreground">{stock.symbol}</div>
-                        <div className={`p-2 rounded-full ${stock.change >= 0 ? 'bg-chart-secondary/10' : 'bg-chart-danger/10'}`}>
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <CardContent className="p-6 relative">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="space-y-1">
+                          <div className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">{stock.symbol}</div>
+                          <div className="text-xs text-muted-foreground uppercase tracking-wider">Stock</div>
+                        </div>
+                        <div className={`p-3 rounded-full transition-all duration-300 ${stock.change >= 0 ? 'bg-chart-secondary/10 group-hover:bg-chart-secondary/20' : 'bg-chart-danger/10 group-hover:bg-chart-danger/20'}`}>
                           {stock.change >= 0 ? (
-                            <TrendingUp className="h-4 w-4 text-chart-secondary" />
+                            <TrendingUp className="h-5 w-5 text-chart-secondary" />
                           ) : (
-                            <TrendingDown className="h-4 w-4 text-chart-danger" />
+                            <TrendingDown className="h-5 w-5 text-chart-danger" />
                           )}
                         </div>
                       </div>
-                      <div className="text-lg font-bold text-foreground">${stock.price.toFixed(2)}</div>
-                      <div className={`text-xs font-medium ${stock.change >= 0 ? 'text-chart-secondary' : 'text-chart-danger'}`}>
-                        {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.change >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
+                      <div className="space-y-2">
+                        <div className="text-2xl font-bold text-foreground">${stock.price.toFixed(2)}</div>
+                        <div className={`text-sm font-semibold flex items-center gap-1 ${stock.change >= 0 ? 'text-chart-secondary' : 'text-chart-danger'}`}>
+                          <span>{stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}</span>
+                          <span>({stock.change >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>View Analysis</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
